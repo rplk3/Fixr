@@ -4,7 +4,15 @@ const bcrypt = require("bcryptjs");
 //Register User
 exports.registerUser = async (req, res) => {
     try {
+        if (!req.body) {
+            return res.status(400).json({ error: "Request body is required" });
+        }
+
         const { name, email, password } = req.body;
+
+        if (!name || !email || !password) {
+            return res.status(400).json({ error: "name, email and password are required" });
+        }
 
         //check if user exists
         const existingUser = await User.findOne({email});
@@ -25,6 +33,14 @@ exports.registerUser = async (req, res) => {
         });
 
         const savedUser = await user.save();
+        return res.status(201).json({
+            message: "User registered successfully",
+            user: {
+                id: savedUser._id,
+                name: savedUser.name,
+                email: savedUser.email,
+            },
+        });
 
     } catch (error) {
         res.status(500).json({error: error.message});

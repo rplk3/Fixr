@@ -6,14 +6,14 @@ const connectDB = require("./config/db");
 
 const app = express();
 
-const authRoutes = require("./routes/authRoutes");
-app.use("/api/auth", authRoutes);
-
 // connect DB
 connectDB();
 
 app.use(cors());
 app.use(express.json());
+
+const authRoutes = require("./routes/authRoutes");
+app.use("/api/auth", authRoutes);
 
 app.get("/", (req, res) => {
   res.send("Fixr API Running 🚀");
