@@ -88,7 +88,15 @@ const updateService = async (req, res) => {
       });
     }
 
-    if (service.provider.toString() !== req.user._id.toString()) {
+    const loggedInUserId = req.user._id || req.user.id;
+
+    if (!loggedInUserId) {
+      return res.status(401).json({
+        message: "User not found in request",
+      });
+    }
+
+    if (service.provider.toString() !== loggedInUserId.toString()) {
       return res.status(403).json({
         message: "Not authorized to update this service",
       });
