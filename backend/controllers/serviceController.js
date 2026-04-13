@@ -1,4 +1,5 @@
 const Service = require("../models/Service");
+const { updateMany } = require("../models/User");
 
 // @desc    Get all services
 // @route   GET /api/services
@@ -78,4 +79,5 @@ module.exports = {
   getServices,
   createService,
   getServiceById,
+  updateService,
 };
