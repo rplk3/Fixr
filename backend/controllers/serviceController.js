@@ -75,6 +75,43 @@ const getServiceById = async (req, res) => {
   }
 };
 
+// @desc    Update service
+// @route   PUT /api/services/:id
+// @access  Private
+const updateService = async (req, res) => {
+  try {
+    const service = await Service.findById(req.params.id);
+
+    if (!service) {
+      return res.status(404).json({
+        message: "Service not found",
+      });
+    }
+
+    if (service.provider.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        message: "Not authorized to update this service",
+      });
+    }
+
+    const updatedService = await Service.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    res.status(200).json(updatedService);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to update service",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getServices,
   createService,
