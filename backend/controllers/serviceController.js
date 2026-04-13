@@ -120,9 +120,49 @@ const updateService = async (req, res) => {
   }
 };
 
+// @desc    Delete service
+// @route   DELETE /api/services/:id
+// @access  Private
+const deleteService = async (req, res) => {
+  try {
+    const service = await Service.findById(req.params.id);
+
+    if (!service) {
+      return res.status(404).json({
+        message: "Service not found",
+      });
+    }
+
+    const loggedInUserId = req.user._id || req.user.id;
+
+    if (!loggedInUserId) {
+      return res.status(401).json({
+        message: "User not found in request",
+      });
+    }
+
+    if (service.provider.toString() !== loggedInUserId.toString()) {
+      return res.status(403).json({
+        message: "Not authorized to delete this service",
+      });
+    }
+
+    await service.deleteOne();
+
+    res.status(200).json({
+      message: "Service deleted successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to delete service",
+      error: error.message,
+    });
+  }
+};
 module.exports = {
   getServices,
   createService,
   getServiceById,
   updateService,
+  deleteService,
 };
