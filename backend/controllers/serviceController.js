@@ -77,4 +77,5 @@ const getServiceById = async (req, res) => {
 module.exports = {
   getServices,
   createService,
+  getServiceById,
 };
