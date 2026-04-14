@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 
 /**
- * Fix for Gradle 9 compatibility with foojay-resolver-convention plugin
- * Updates the plugin version from 0.5.0 to 1.0.0 to support Gradle 9
- * (0.5.0 references IBM_SEMERU which was removed in Gradle 9)
+ * Post-install script to fix Gradle 9 and Android C++ linking issues
  */
 
 const fs = require('fs');
 const path = require('path');
 
+// Fix 1: Update foojay-resolver-convention for Gradle 9 compatibility
 const gradlePluginPath = path.join(
   __dirname,
   '../node_modules/@react-native/gradle-plugin/settings.gradle.kts'
@@ -27,6 +26,36 @@ try {
     }
   }
 } catch (error) {
-  console.warn('⚠ Could not apply foojay-resolver-convention fix:', error.message);
-  process.exit(0); // Don't fail npm install, just warn
+  console.warn('⚠ Could not applfoojay-resolver-convention fix:', error.message);
 }
+
+// Fix 2: Patch react-native-safe-area-context CMakeLists.txt to link c++_shared
+const safeAreaCMakePath = path.join(
+  __dirname,
+  '../node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt'
+);
+
+try {
+  if (fs.existsSync(safeAreaCMakePath)) {
+    let content = fs.readFileSync(safeAreaCMakePath, 'utf8');
+
+    // Add c++_shared to both target_link_libraries blocks if not already present
+    if (!content.includes('c++_shared')) {
+      // Fix both the REACTNATIVE_MERGED_SO and else() branches
+      content = content.replace(
+        /(\s+reactnative\s+\))/,
+        '$1\n          c++_shared'
+      );
+      content = content.replace(
+        /(\s+yoga\s+\))/,
+        '$1\n          c++_shared'
+      );
+      fs.writeFileSync(safeAreaCMakePath, content, 'utf8');
+      console.log('✓ Fixed react-native-safe-area-context CMakeLists.txt to link c++_shared');
+    }
+  }
+} catch (error) {
+  console.warn('⚠ Could not apply C++ linking fix:', error.message);
+  process.exit(0); // Don't fail npm install
+}
+
