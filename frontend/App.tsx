@@ -1,36 +1,19 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import React from "react";
+import { View, StyleSheet } from "react-native";
+import ServiceCard from "./src/components/ServiceCard";
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
-
-function App() {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  return (
-    <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
-    </SafeAreaProvider>
-  );
-}
-
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
+function App(): React.JSX.Element {
   return (
     <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
+      <ServiceCard
+        service={{
+          title: "Plumbing Repair",
+          category: "Plumbing",
+          price: 2500,
+          image:
+            "https://images.unsplash.com/photo-1581578731548-c64695cc6952",
+        }}
+        onPress={() => console.log("Clicked")}
       />
     </View>
   );
@@ -39,6 +22,9 @@ function AppContent() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 20,
+    backgroundColor: "#CCDCDB",
+    justifyContent: "center",
   },
 });
 
