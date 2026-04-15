@@ -1,8 +1,8 @@
 import React from "react";
-import ServicesListScreen from "./src/screens/ServicesListScreen";
+import AppNavigator from "./src/navigation/AppNavigator";
 
 function App(): React.JSX.Element {
-  return <ServicesListScreen />;
+  return <AppNavigator />;
 }
 
 export default App;
