@@ -8,8 +8,9 @@ const ServiceCard = ({ service, onPress }) => {
       <Image
         source={{
           uri:
-            service.image ||
-            "https://via.placeholder.com/150",
+            service.image && service.image.trim() !== ""
+              ? service.image
+              : "https://via.placeholder.com/300",
         }}
         style={styles.image}
       />
