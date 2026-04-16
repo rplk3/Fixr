@@ -1,3 +1,4 @@
+import { useNavigation } from "@react-navigation/native";
 import React from "react";
 import {
   View,
@@ -9,6 +10,8 @@ import {
   TouchableOpacity,
 } from "react-native";
 import ServiceCard from "../components/ServiceCard";
+
+const navigation = useNavigation();
 
 const services = [
   {
@@ -72,7 +75,7 @@ const ServicesListScreen = () => {
         renderItem={({ item }) => (
           <ServiceCard
             service={item}
-            onPress={() => console.log("Selected:", item.title)}
+            onPress={() => navigation.navigate("Details", { service: item })}
           />
         )}
       />

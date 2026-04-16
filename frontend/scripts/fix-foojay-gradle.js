@@ -35,6 +35,18 @@ const safeAreaCMakePath = path.join(
   '../node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt'
 );
 
+// Fix 3: Patch react-native-worklets CMakeLists.txt to link c++_shared
+const workletsCMakePath = path.join(
+  __dirname,
+  '../node_modules/react-native-worklets/android/CMakeLists.txt'
+);
+
+// Fix 4: Patch react-native-reanimated CMakeLists.txt to link c++_shared
+const reanimatedCMakePath = path.join(
+  __dirname,
+  '../node_modules/react-native-reanimated/android/CMakeLists.txt'
+);
+
 try {
   if (fs.existsSync(safeAreaCMakePath)) {
     let content = fs.readFileSync(safeAreaCMakePath, 'utf8');
@@ -56,6 +68,72 @@ try {
   }
 } catch (error) {
   console.warn('⚠ Could not apply C++ linking fix:', error.message);
+}
+
+try {
+  if (fs.existsSync(workletsCMakePath)) {
+    let content = fs.readFileSync(workletsCMakePath, 'utf8');
+
+    if (!content.includes('worklets android log c++_shared')) {
+      content = content.replace(
+        'target_link_libraries(worklets android log ReactAndroid::reactnative ReactAndroid::jsi',
+        'target_link_libraries(worklets android log c++_shared ReactAndroid::reactnative ReactAndroid::jsi'
+      );
+      fs.writeFileSync(workletsCMakePath, content, 'utf8');
+      console.log('✓ Fixed react-native-worklets CMakeLists.txt to link c++_shared');
+    }
+  }
+} catch (error) {
+  console.warn('⚠ Could not apply react-native-worklets linking fix:', error.message);
+}
+
+try {
+  if (fs.existsSync(reanimatedCMakePath)) {
+    let content = fs.readFileSync(reanimatedCMakePath, 'utf8');
+
+    if (!content.includes('reanimated\n  c++_shared')) {
+      content = content.replace(
+        'target_link_libraries(\n  reanimated\n  log',
+        'target_link_libraries(\n  reanimated\n  c++_shared\n  log'
+      );
+      fs.writeFileSync(reanimatedCMakePath, content, 'utf8');
+      console.log('✓ Fixed react-native-reanimated CMakeLists.txt to link c++_shared');
+    }
+  }
+} catch (error) {
+  console.warn('⚠ Could not apply react-native-reanimated linking fix:', error.message);
   process.exit(0); // Don't fail npm install
+}
+
+// Fix 5: Patch react-native-screens CMakeLists.txt to link c++_shared
+const screensCMakePath = path.join(
+  __dirname,
+  '../node_modules/react-native-screens/android/CMakeLists.txt'
+);
+
+try {
+  if (fs.existsSync(screensCMakePath)) {
+    let content = fs.readFileSync(screensCMakePath, 'utf8');
+
+    if (!content.includes('c++_shared')) {
+      // Add c++_shared to both the if(RNS_NEW_ARCH_ENABLED) and else() blocks
+      // Pattern 1: New arch block (after fbjni::fbjni, before android)
+      content = content.replace(
+        /fbjni::fbjni\n\s+android/,
+        'fbjni::fbjni\n        c++_shared\n        android'
+      );
+      // Pattern 2: Non-arch block (after jsi, before android closing paren)
+      if (!content.includes('c++_shared')) {
+        content = content.replace(
+          /\)else\(\)\s+target_link_libraries\(rnscreens\n\s+ReactAndroid::jsi\n\s+android/,
+          ')else()\n    target_link_libraries(rnscreens\n        ReactAndroid::jsi\n        c++_shared\n        android'
+        );
+      }
+      fs.writeFileSync(screensCMakePath, content, 'utf8');
+      console.log('✓ Fixed react-native-screens CMakeLists.txt to link c++_shared');
+    }
+  }
+} catch (error) {
+  console.warn('⚠ Could not apply react-native-screens linking fix:', error.message);
 }
 

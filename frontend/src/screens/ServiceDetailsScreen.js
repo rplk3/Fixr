@@ -1,3 +1,4 @@
+import { useRoute } from "@react-navigation/native";
 import React from "react";
 import {
   View,
@@ -8,19 +9,10 @@ import {
   TouchableOpacity,
 } from "react-native";
 
-type Service = {
-  title: string;
-  category: string;
-  price: number;
-  image: string;
-  description?: string;
-};
+const ServiceDetailsScreen = () => {
+  const route = useRoute();
+  const { service } = route.params;
 
-type Props = {
-  service: Service;
-};
-
-const ServiceDetailsScreen = ({ service }: Props) => {
   return (
     <ScrollView style={styles.container}>
       <Image source={{ uri: service.image }} style={styles.image} />
