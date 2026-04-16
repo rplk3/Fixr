@@ -13,15 +13,12 @@ const AppNavigator = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen
-          name="Services"
-          component={ServicesListScreen}
-        />
-        <Stack.Screen
-          name="Details"
-          component={ServiceDetailsScreen}
-        />
-        <Stack.Screen name="AddService" component={AddServiceScreen} />
+        <Stack.Navigator initialRouteName="Login">
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="SellerRegister" component={SellerRegisterScreen} />
+          <Stack.Screen name="Services" component={ServicesListScreen} />
+          <Stack.Screen name="Details" component={ServiceDetailsScreen} />
+        </Stack.Navigator>
       </Stack.Navigator>
     </NavigationContainer>
   );
