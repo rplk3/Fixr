@@ -1,5 +1,4 @@
-import { useNavigation } from "@react-navigation/native";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,42 +7,34 @@ import {
   SafeAreaView,
   TextInput,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import ServiceCard from "../components/ServiceCard";
-
-const services = [
-  {
-    _id: "1",
-    title: "Plumbing Repair",
-    category: "Plumbing",
-    price: 2500,
-    image: "https://images.unsplash.com/photo-1581578731548-c64695cc6952",
-  },
-  {
-    _id: "2",
-    title: "AC Service",
-    category: "Appliance Repair",
-    price: 4000,
-    image: "https://images.unsplash.com/photo-1621905252507-b35492cc74b4",
-  },
-  {
-    _id: "3",
-    title: "House Cleaning",
-    category: "Cleaning",
-    price: 3000,
-    image: "https://images.unsplash.com/photo-1585421514738-01798e348b17",
-  },
-  {
-    _id: "4",
-    title: "Electrical Repair",
-    category: "Electrical",
-    price: 3500,
-    image: "https://images.unsplash.com/photo-1621905251918-48416bd8575a",
-  },
-];
+import { getAllServices } from "../services/serviceApi";
 
 const ServicesListScreen = () => {
   const navigation = useNavigation();
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const fetchServices = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const data = await getAllServices();
+      setServices(data);
+    } catch (err) {
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchServices();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -62,23 +53,32 @@ const ServicesListScreen = () => {
 
       <View style={styles.sectionRow}>
         <Text style={styles.sectionTitle}>Popular Services</Text>
-        <TouchableOpacity>
-          <Text style={styles.viewAll}>View All</Text>
+        <TouchableOpacity onPress={fetchServices}>
+          <Text style={styles.viewAll}>Refresh</Text>
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={services}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <ServiceCard
-            service={item}
-            onPress={() => navigation.navigate("Details", { service: item })}
-          />
-        )}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#4CB572" style={{ marginTop: 30 }} />
+      ) : error ? (
+        <Text style={styles.errorText}>{error}</Text>
+      ) : (
+        <FlatList
+          data={services}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <ServiceCard
+              service={item}
+              onPress={() => navigation.navigate("Details", { service: item })}
+            />
+          )}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No services available</Text>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -134,5 +134,17 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 20,
+  },
+  errorText: {
+    color: "red",
+    fontSize: 14,
+    marginTop: 20,
+    textAlign: "center",
+  },
+  emptyText: {
+    color: "#135E4B",
+    fontSize: 15,
+    textAlign: "center",
+    marginTop: 30,
   },
 });
