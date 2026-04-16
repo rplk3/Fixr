@@ -11,8 +11,6 @@ import {
 } from "react-native";
 import ServiceCard from "../components/ServiceCard";
 
-const navigation = useNavigation();
-
 const services = [
   {
     _id: "1",
@@ -45,6 +43,8 @@ const services = [
 ];
 
 const ServicesListScreen = () => {
+  const navigation = useNavigation();
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
