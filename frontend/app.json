@@ -1,4 +1,12 @@
 {
-  "name": "Fixr",
-  "displayName": "Fixr"
+  "expo": {
+    "name": "Fixr",
+    "slug": "fixr",
+    "version": "1.0.0",
+    "platforms": ["ios", "android", "web"],
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    }
+  }
 }

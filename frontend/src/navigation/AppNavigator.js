@@ -1,7 +1,7 @@
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-
+import AddServiceScreen from "../screens/AddServiceScreen";
 import ServicesListScreen from "../screens/ServicesListScreen";
 import ServiceDetailsScreen from "../screens/ServiceDetailsScreen";
 
@@ -19,6 +19,7 @@ const AppNavigator = () => {
           name="Details"
           component={ServiceDetailsScreen}
         />
+        <Stack.Screen name="AddService" component={AddServiceScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
