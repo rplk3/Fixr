@@ -6,14 +6,41 @@ import {
     TouchableOpacity,
     StyleSheet,
     Alert,
+    ActivityIndicator,
 } from "react-native";
+import { loginUser } from "../services/authApi";
+
+let savedToken = null;
+export const getToken = () => savedToken;
 
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    const handleLogin = () => {
-        Alert.alert("Login", "Login API will be connected next");
+    const handleLogin = async () => {
+        if (!email || !password) {
+            return Alert.alert("Error", "Please enter email and password");
+        }
+
+        try {
+            setLoading(true);
+            const data = await loginUser(email, password);
+
+            // Store token
+            savedToken = data.token;
+
+            // Navigate based on role
+            if (data.user.role === "seller") {
+                navigation.replace("Services"); // seller goes to manage services
+            } else {
+                navigation.replace("Services"); // customer goes to browse services
+            }
+        } catch (error) {
+            Alert.alert("Login Failed", error.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -28,6 +55,7 @@ const LoginScreen = ({ navigation }) => {
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
+                keyboardType="email-address"
             />
 
             <TextInput
@@ -39,8 +67,16 @@ const LoginScreen = ({ navigation }) => {
                 secureTextEntry
             />
 
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-                <Text style={styles.loginButtonText}>Login</Text>
+            <TouchableOpacity
+                style={styles.loginButton}
+                onPress={handleLogin}
+                disabled={loading}
+            >
+                {loading ? (
+                    <ActivityIndicator color="#fff" />
+                ) : (
+                    <Text style={styles.loginButtonText}>Login</Text>
+                )}
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => navigation.navigate("SellerRegister")}>
