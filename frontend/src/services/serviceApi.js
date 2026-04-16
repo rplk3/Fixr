@@ -1,12 +1,10 @@
-const BASE_URL = "http://192.168.56.1:5000/api";
-const TOKEN = "PASTE_YOUR_JWT_TOKEN_HERE";
+const BASE_URL = "http://192.168.8.106:5000/api";
 
 export const getAllServices = async () => {
   const response = await fetch(`${BASE_URL}/services`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${TOKEN}`,
     },
   });
 
