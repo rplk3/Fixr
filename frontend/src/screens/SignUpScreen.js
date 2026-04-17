@@ -11,11 +11,13 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import { loginUser } from "../services/authApi";
+import { registerUser } from "../services/authApi";
 
-const LoginScreen = ({ navigation }) => {
+const SignUpScreen = ({ navigation }) => {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -23,26 +25,30 @@ const LoginScreen = ({ navigation }) => {
     const newErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+    if (!name.trim()) newErrors.name = "Name is required";
     if (!email.trim()) newErrors.email = "Email is required";
     else if (!emailRegex.test(email)) newErrors.email = "Invalid email format";
-
     if (!password) newErrors.password = "Password is required";
-    else if (password.length < 6) newErrors.password = "Password must be at least 6 characters";
+    else if (password.length < 6) newErrors.password = "Must be at least 6 characters";
+    if (password !== confirmPassword) newErrors.confirmPassword = "Passwords do not match";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleLogin = async () => {
+  const clearError = (field) => setErrors((e) => ({ ...e, [field]: null }));
+
+  const handleSignUp = async () => {
     if (!validate()) return;
 
     try {
       setLoading(true);
-      const data = await loginUser(email.trim(), password);
-      // Navigate to services list (role checking happens there)
-      navigation.replace("Services");
+      await registerUser(name.trim(), email.trim(), password);
+      Alert.alert("Success", "Account created! Please login.", [
+        { text: "OK", onPress: () => navigation.replace("Login") },
+      ]);
     } catch (error) {
-      Alert.alert("Login Failed", error.message);
+      Alert.alert("Registration Failed", error.message);
     } finally {
       setLoading(false);
     }
@@ -55,16 +61,26 @@ const LoginScreen = ({ navigation }) => {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.logo}>Fixr</Text>
-        <Text style={styles.subtitle}>Welcome back</Text>
+        <Text style={styles.subtitle}>Create your account</Text>
 
         <View style={styles.form}>
+          <Text style={styles.label}>Full Name</Text>
+          <TextInput
+            style={[styles.input, errors.name && styles.inputError]}
+            placeholder="Enter your full name"
+            placeholderTextColor="#999"
+            value={name}
+            onChangeText={(t) => { setName(t); clearError("name"); }}
+          />
+          {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+
           <Text style={styles.label}>Email</Text>
           <TextInput
             style={[styles.input, errors.email && styles.inputError]}
             placeholder="Enter your email"
             placeholderTextColor="#999"
             value={email}
-            onChangeText={(t) => { setEmail(t); setErrors((e) => ({ ...e, email: null })); }}
+            onChangeText={(t) => { setEmail(t); clearError("email"); }}
             autoCapitalize="none"
             keyboardType="email-address"
           />
@@ -73,29 +89,40 @@ const LoginScreen = ({ navigation }) => {
           <Text style={styles.label}>Password</Text>
           <TextInput
             style={[styles.input, errors.password && styles.inputError]}
-            placeholder="Enter your password"
+            placeholder="Min 6 characters"
             placeholderTextColor="#999"
             value={password}
-            onChangeText={(t) => { setPassword(t); setErrors((e) => ({ ...e, password: null })); }}
+            onChangeText={(t) => { setPassword(t); clearError("password"); }}
             secureTextEntry
           />
           {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
 
+          <Text style={styles.label}>Confirm Password</Text>
+          <TextInput
+            style={[styles.input, errors.confirmPassword && styles.inputError]}
+            placeholder="Re-enter password"
+            placeholderTextColor="#999"
+            value={confirmPassword}
+            onChangeText={(t) => { setConfirmPassword(t); clearError("confirmPassword"); }}
+            secureTextEntry
+          />
+          {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
+
           <TouchableOpacity
-            style={styles.loginButton}
-            onPress={handleLogin}
+            style={styles.signUpButton}
+            onPress={handleSignUp}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.loginButtonText}>Login</Text>
+              <Text style={styles.signUpButtonText}>Sign Up</Text>
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
-            <Text style={styles.signUpLink}>
-              Don't have an account? <Text style={styles.signUpBold}>Sign Up</Text>
+          <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+            <Text style={styles.loginLink}>
+              Already have an account? <Text style={styles.loginBold}>Login</Text>
             </Text>
           </TouchableOpacity>
         </View>
@@ -104,7 +131,7 @@ const LoginScreen = ({ navigation }) => {
   );
 };
 
-export default LoginScreen;
+export default SignUpScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -157,7 +184,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 10,
   },
-  loginButton: {
+  signUpButton: {
     backgroundColor: "#4CB572",
     paddingVertical: 15,
     borderRadius: 12,
@@ -165,17 +192,17 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 16,
   },
-  loginButtonText: {
+  signUpButtonText: {
     color: "#fff",
     fontWeight: "bold",
     fontSize: 16,
   },
-  signUpLink: {
+  loginLink: {
     textAlign: "center",
     color: "#666",
     fontSize: 14,
   },
-  signUpBold: {
+  loginBold: {
     color: "#4CB572",
     fontWeight: "bold",
   },

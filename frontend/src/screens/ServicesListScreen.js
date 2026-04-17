@@ -8,16 +8,26 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import ServiceCard from "../components/ServiceCard";
 import { getAllServices } from "../services/serviceApi";
+import { getUser, applyProvider } from "../services/authApi";
 
 const ServicesListScreen = () => {
   const navigation = useNavigation();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [providerStatus, setProviderStatus] = useState("none");
+  const [applying, setApplying] = useState(false);
+
+  useEffect(() => {
+    const user = getUser();
+    if (user) setProviderStatus(user.providerStatus || "none");
+    fetchServices();
+  }, []);
 
   const fetchServices = async () => {
     try {
@@ -32,9 +42,30 @@ const ServicesListScreen = () => {
     }
   };
 
-  useEffect(() => {
-    fetchServices();
-  }, []);
+  const handleApplyProvider = async () => {
+    Alert.alert(
+      "Become a Service Provider",
+      "Would you like to apply to become a service provider? This action can only be done once.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Apply",
+          onPress: async () => {
+            try {
+              setApplying(true);
+              await applyProvider();
+              setProviderStatus("pending");
+              Alert.alert("Success", "Your application has been submitted! You'll be notified once approved.");
+            } catch (err) {
+              Alert.alert("Error", err.message);
+            } finally {
+              setApplying(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -50,6 +81,29 @@ const ServicesListScreen = () => {
           style={styles.searchInput}
         />
       </View>
+
+      {/* Become a Provider button - only shows if status is 'none' */}
+      {providerStatus === "none" && (
+        <TouchableOpacity
+          style={styles.providerButton}
+          onPress={handleApplyProvider}
+          disabled={applying}
+        >
+          {applying ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={styles.providerButtonText}>
+              🚀 Become a Service Provider
+            </Text>
+          )}
+        </TouchableOpacity>
+      )}
+
+      {providerStatus === "pending" && (
+        <View style={styles.pendingBanner}>
+          <Text style={styles.pendingText}>⏳ Provider application pending approval</Text>
+        </View>
+      )}
 
       <View style={styles.sectionRow}>
         <Text style={styles.sectionTitle}>Popular Services</Text>
@@ -106,7 +160,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   searchContainer: {
-    marginBottom: 20,
+    marginBottom: 12,
   },
   searchInput: {
     backgroundColor: "#FFFFFF",
@@ -115,6 +169,31 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     color: "#135E4B",
+  },
+  providerButton: {
+    backgroundColor: "#135E4B",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  providerButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 15,
+  },
+  pendingBanner: {
+    backgroundColor: "#FFF3CD",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    marginBottom: 12,
+  },
+  pendingText: {
+    color: "#856404",
+    fontSize: 13,
+    textAlign: "center",
+    fontWeight: "600",
   },
   sectionRow: {
     flexDirection: "row",
