@@ -2,54 +2,59 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-// Register User
+// Register User (always as customer)
 exports.registerUser = async (req, res) => {
   try {
-    if (!req.body) {
-      return res.status(400).json({ error: "Request body is required" });
-    }
-
-    const { name, email, password } = req.body;
+    const { name, email, password } = req.body || {};
 
     if (!name || !email || !password) {
-      return res.status(400).json({ error: "name, email and password are required" });
+      return res.status(400).json({ message: "Name, email and password are required" });
     }
 
-    // Check if user exists
+    // Email format check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    // Password min length
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user
-    const user = new User({
+    const user = await User.create({
       name,
       email,
       password: hashedPassword,
+      roles: ['customer'],
+      providerStatus: 'none',
     });
 
-    const savedUser = await user.save();
-    return res.status(201).json({
+    res.status(201).json({
       message: "User registered successfully",
-      user: {
-        id: savedUser._id,
-        name: savedUser.name,
-        email: savedUser.email,
-      },
+      user: { id: user._id, name: user.name, email: user.email },
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
 // Login User
 exports.loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body || {};
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
 
     const user = await User.findOne({ email });
     if (!user) {
@@ -62,10 +67,7 @@ exports.loginUser = async (req, res) => {
     }
 
     const token = jwt.sign(
-      {
-        id: user._id,
-        role: user.role
-      },
+      { id: user._id, roles: user.roles },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -77,10 +79,35 @@ exports.loginUser = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
-      }
+        roles: user.roles,
+        providerStatus: user.providerStatus,
+      },
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Apply to become a service provider
+exports.applyProvider = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.providerStatus !== 'none') {
+      return res.status(400).json({ message: "You have already applied to be a provider" });
+    }
+
+    user.providerStatus = 'pending';
+    await user.save();
+
+    res.status(200).json({
+      message: "Provider application submitted successfully",
+      providerStatus: user.providerStatus,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

@@ -14,10 +14,15 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    role: {
+    roles: {
+        type: [String],
+        enum: ['customer', 'provider'],
+        default: ['customer'],
+    },
+    providerStatus: {
         type: String,
-        enum: ['customer', 'seller'],
-        default: 'customer',
+        enum: ['none', 'pending', 'approved', 'rejected'],
+        default: 'none',
     },
 }, { timestamps: true });
 
