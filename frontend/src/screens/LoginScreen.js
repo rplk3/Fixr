@@ -20,6 +20,8 @@ const LoginScreen = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
   const validate = () => {
     const newErrors = {};
@@ -40,11 +42,16 @@ const LoginScreen = ({ navigation }) => {
 
     try {
       setLoading(true);
+      setApiError("");
+      setSuccessMsg("");
       const data = await loginUser(email.trim(), password);
-      // Navigate to services list (role checking happens there)
-      navigation.replace("Services");
+      
+      setSuccessMsg("Login successful! Rediriecting...");
+      setTimeout(() => {
+        navigation.replace("Services");
+      }, 1000);
     } catch (error) {
-      Alert.alert("Login Failed", error.message);
+      setApiError(error.message);
     } finally {
       setLoading(false);
     }
@@ -60,6 +67,9 @@ const LoginScreen = ({ navigation }) => {
         <Text style={styles.subtitle}>Welcome back</Text>
 
         <View style={styles.form}>
+          {successMsg ? <Text style={styles.successBanner}>{successMsg}</Text> : null}
+          {apiError ? <Text style={styles.errorBanner}>{apiError}</Text> : null}
+
           <Text style={styles.label}>Email</Text>
           <TextInput
             style={[styles.input, errors.email && styles.inputError]}
@@ -180,6 +190,24 @@ const styles = StyleSheet.create({
     color: "#E74C3C",
     fontSize: 12,
     marginBottom: 10,
+  },
+  successBanner: {
+    backgroundColor: '#D4EDDA',
+    color: '#155724',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 15,
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  errorBanner: {
+    backgroundColor: '#F8D7DA',
+    color: '#721C24',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 15,
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
   loginButton: {
     backgroundColor: "#4CB572",

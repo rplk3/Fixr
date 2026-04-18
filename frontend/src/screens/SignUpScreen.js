@@ -24,6 +24,8 @@ const SignUpScreen = ({ navigation }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
   const validate = () => {
     const newErrors = {};
@@ -48,12 +50,15 @@ const SignUpScreen = ({ navigation }) => {
 
     try {
       setLoading(true);
+      setApiError("");
+      setSuccessMsg("");
       await registerUser(firstName.trim(), lastName.trim(), email.trim(), password);
-      Alert.alert("Success", "Account created! Please login.", [
-        { text: "OK", onPress: () => navigation.replace("Login") },
-      ]);
+      setSuccessMsg("Account created! Redirecting to login...");
+      setTimeout(() => {
+        navigation.replace("Login");
+      }, 1500);
     } catch (error) {
-      Alert.alert("Registration Failed", error.message);
+      setApiError(error.message);
     } finally {
       setLoading(false);
     }
@@ -69,6 +74,9 @@ const SignUpScreen = ({ navigation }) => {
         <Text style={styles.subtitle}>Create your account</Text>
 
         <View style={styles.form}>
+          {successMsg ? <Text style={styles.successBanner}>{successMsg}</Text> : null}
+          {apiError ? <Text style={styles.errorBanner}>{apiError}</Text> : null}
+
           <Text style={styles.label}>First Name</Text>
           <TextInput
             style={[styles.input, errors.firstName && styles.inputError]}
@@ -228,6 +236,24 @@ const styles = StyleSheet.create({
     color: "#E74C3C",
     fontSize: 12,
     marginBottom: 10,
+  },
+  successBanner: {
+    backgroundColor: '#D4EDDA',
+    color: '#155724',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 15,
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  errorBanner: {
+    backgroundColor: '#F8D7DA',
+    color: '#721C24',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 15,
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
   signUpButton: {
     backgroundColor: "#4CB572",
