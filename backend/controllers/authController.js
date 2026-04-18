@@ -5,10 +5,10 @@ const jwt = require("jsonwebtoken");
 // Register User (always as customer)
 exports.registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body || {};
+    const { firstName, lastName, email, password } = req.body || {};
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "Name, email and password are required" });
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({ message: "First name, last name, email and password are required" });
     }
 
     // Email format check
@@ -31,7 +31,8 @@ exports.registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const user = await User.create({
-      name,
+      firstName,
+      lastName,
       email,
       password: hashedPassword,
       roles: ['customer'],
@@ -40,7 +41,7 @@ exports.registerUser = async (req, res) => {
 
     res.status(201).json({
       message: "User registered successfully",
-      user: { id: user._id, name: user.name, email: user.email },
+      user: { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -77,7 +78,8 @@ exports.loginUser = async (req, res) => {
       token,
       user: {
         id: user._id,
-        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
         roles: user.roles,
         providerStatus: user.providerStatus,
