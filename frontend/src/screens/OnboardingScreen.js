@@ -1,0 +1,246 @@
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Switch,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
+import { applyProvider } from "../services/authApi";
+
+const OnboardingScreen = ({ navigation }) => {
+  const [details, setDetails] = useState({
+    title: "",
+    description: "",
+    category: "",
+    price: "",
+    location: "",
+    image: "",
+    availability: true,
+  });
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const handleChange = (key, value) => {
+    setDetails((prev) => ({ ...prev, [key]: value }));
+    setErrorMsg("");
+  };
+
+  const handleSubmit = async () => {
+    // Basic validation
+    if (!details.title.trim() || !details.description.trim() || !details.category.trim() || !details.price.trim() || !details.location.trim()) {
+      setErrorMsg("Please fill in all required fields.");
+      return;
+    }
+
+    if (isNaN(details.price) || Number(details.price) < 0) {
+      setErrorMsg("Please enter a valid price.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await applyProvider(details);
+      Alert.alert("Success", "Your application has been submitted! You'll be notified once approved.", [
+        { text: "OK", onPress: () => navigation.goBack() },
+      ]);
+    } catch (error) {
+      setErrorMsg(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <Text style={styles.greeting}>Become a Provider</Text>
+          <Text style={styles.subText}>Tell us what services you offer</Text>
+        </View>
+
+        <View style={styles.formContainer}>
+          {errorMsg ? <Text style={styles.errorBanner}>{errorMsg}</Text> : null}
+
+          <Text style={styles.label}>Service Title *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. Professional Plumbing Servcies"
+            placeholderTextColor="#999"
+            value={details.title}
+            onChangeText={(text) => handleChange("title", text)}
+          />
+
+          <Text style={styles.label}>Description *</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Describe what you do..."
+            placeholderTextColor="#999"
+            multiline
+            numberOfLines={4}
+            value={details.description}
+            onChangeText={(text) => handleChange("description", text)}
+          />
+
+          <Text style={styles.label}>Category *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. Plumbing, Electrician, Cleaning"
+            placeholderTextColor="#999"
+            value={details.category}
+            onChangeText={(text) => handleChange("category", text)}
+          />
+
+          <Text style={styles.label}>Price (LKR/hr) *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. 1500"
+            placeholderTextColor="#999"
+            keyboardType="numeric"
+            value={details.price}
+            onChangeText={(text) => handleChange("price", text)}
+          />
+
+          <Text style={styles.label}>Location *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. Colombo 03"
+            placeholderTextColor="#999"
+            value={details.location}
+            onChangeText={(text) => handleChange("location", text)}
+          />
+
+          <Text style={styles.label}>Profile Image URL (Optional)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="https://example.com/my-photo.jpg"
+            placeholderTextColor="#999"
+            value={details.image}
+            onChangeText={(text) => handleChange("image", text)}
+            autoCapitalize="none"
+          />
+
+          <View style={styles.switchContainer}>
+            <Text style={styles.labelSwitch}>Currently Available for Work</Text>
+            <Switch
+              trackColor={{ false: "#ccc", true: "#A8D5BA" }}
+              thumbColor={details.availability ? "#135E4B" : "#f4f3f4"}
+              onValueChange={(val) => handleChange("availability", val)}
+              value={details.availability}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={styles.submitButton}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.submitButtonText}>Submit Application</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+};
+
+export default OnboardingScreen;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#CCDCDB",
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 30,
+    paddingBottom: 40,
+  },
+  header: {
+    marginBottom: 20,
+  },
+  greeting: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#135E4B",
+  },
+  subText: {
+    fontSize: 15,
+    color: "#4CB572",
+    marginTop: 6,
+  },
+  formContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  errorBanner: {
+    backgroundColor: "#F8D7DA",
+    color: "#721C24",
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 15,
+    textAlign: "center",
+    fontWeight: "bold",
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#135E4B",
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: "#F0F7F4",
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 15,
+    color: "#000",
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: "top",
+  },
+  switchContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+    marginTop: 5,
+  },
+  labelSwitch: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#135E4B",
+  },
+  submitButton: {
+    backgroundColor: "#135E4B",
+    paddingVertical: 15,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  submitButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+});

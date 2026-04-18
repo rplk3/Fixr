@@ -1,4 +1,4 @@
-const BASE_URL = "http://192.168.8.106:5000/api";
+const BASE_URL = "http://192.168.8.101:5000/api";
 
 // In-memory token storage
 let authToken = null;
@@ -34,13 +34,14 @@ export const registerUser = async (firstName, lastName, email, password) => {
   return data;
 };
 
-export const applyProvider = async () => {
+export const applyProvider = async (details) => {
   const response = await fetch(`${BASE_URL}/auth/apply-provider`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${authToken}`,
     },
+    body: JSON.stringify(details),
   });
   const data = await response.json();
   if (!response.ok) throw new Error(data.message || "Application failed");

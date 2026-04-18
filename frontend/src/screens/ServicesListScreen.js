@@ -13,7 +13,8 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import ServiceCard from "../components/ServiceCard";
 import { getAllServices } from "../services/serviceApi";
-import { getUser, applyProvider } from "../services/authApi";
+import { getUser } from "../services/authApi";
+import { Ionicons } from "@expo/vector-icons";
 
 const ServicesListScreen = () => {
   const navigation = useNavigation();
@@ -21,11 +22,14 @@ const ServicesListScreen = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [providerStatus, setProviderStatus] = useState("none");
-  const [applying, setApplying] = useState(false);
+  const [hasProviderRole, setHasProviderRole] = useState(false);
 
   useEffect(() => {
     const user = getUser();
-    if (user) setProviderStatus(user.providerStatus || "none");
+    if (user) {
+      setProviderStatus(user.providerStatus || "none");
+      setHasProviderRole(user.roles?.includes('provider'));
+    }
     fetchServices();
   }, []);
 
@@ -42,36 +46,27 @@ const ServicesListScreen = () => {
     }
   };
 
-  const handleApplyProvider = async () => {
-    Alert.alert(
-      "Become a Service Provider",
-      "Would you like to apply to become a service provider? This action can only be done once.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Apply",
-          onPress: async () => {
-            try {
-              setApplying(true);
-              await applyProvider();
-              setProviderStatus("pending");
-              Alert.alert("Success", "Your application has been submitted! You'll be notified once approved.");
-            } catch (err) {
-              Alert.alert("Error", err.message);
-            } finally {
-              setApplying(false);
-            }
-          },
-        },
-      ]
-    );
+  const handleApplyProvider = () => {
+    navigation.navigate("Onboarding");
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.greeting}>Find the best services</Text>
-        <Text style={styles.subText}>Fixr helps you book trusted workers</Text>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.greeting}>Find the best services</Text>
+          <Text style={styles.subText}>Fixr helps you book trusted workers</Text>
+        </View>
+        
+        {hasProviderRole && (
+          <TouchableOpacity
+            style={styles.switchButton}
+            onPress={() => navigation.replace("ProviderDashboard")}
+          >
+            <Ionicons name="swap-horizontal" size={20} color="#fff" />
+            <Text style={styles.switchButtonText}>Provider Mode</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.searchContainer}>
@@ -82,20 +77,14 @@ const ServicesListScreen = () => {
         />
       </View>
 
-      {/* Become a Provider button - only shows if status is 'none' */}
-      {providerStatus === "none" && (
+      {providerStatus === "none" && !hasProviderRole && (
         <TouchableOpacity
           style={styles.providerButton}
           onPress={handleApplyProvider}
-          disabled={applying}
         >
-          {applying ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={styles.providerButtonText}>
-              🚀 Become a Service Provider
-            </Text>
-          )}
+          <Text style={styles.providerButtonText}>
+            🚀 Become a Service Provider
+          </Text>
         </TouchableOpacity>
       )}
 
@@ -158,6 +147,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#4CB572",
     marginTop: 6,
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  switchButton: {
+    flexDirection: "row",
+    backgroundColor: "#135E4B",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: "center",
+    marginLeft: 10,
+  },
+  switchButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 12,
+    marginLeft: 6,
   },
   searchContainer: {
     marginBottom: 12,
