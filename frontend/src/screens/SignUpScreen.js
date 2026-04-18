@@ -12,12 +12,16 @@ import {
   ScrollView,
 } from "react-native";
 import { registerUser } from "../services/authApi";
+import { Ionicons } from "@expo/vector-icons";
 
 const SignUpScreen = ({ navigation }) => {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -25,7 +29,8 @@ const SignUpScreen = ({ navigation }) => {
     const newErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!name.trim()) newErrors.name = "Name is required";
+    if (!firstName.trim()) newErrors.firstName = "First name is required";
+    if (!lastName.trim()) newErrors.lastName = "Last name is required";
     if (!email.trim()) newErrors.email = "Email is required";
     else if (!emailRegex.test(email)) newErrors.email = "Invalid email format";
     if (!password) newErrors.password = "Password is required";
@@ -43,7 +48,7 @@ const SignUpScreen = ({ navigation }) => {
 
     try {
       setLoading(true);
-      await registerUser(name.trim(), email.trim(), password);
+      await registerUser(firstName.trim(), lastName.trim(), email.trim(), password);
       Alert.alert("Success", "Account created! Please login.", [
         { text: "OK", onPress: () => navigation.replace("Login") },
       ]);
@@ -64,15 +69,25 @@ const SignUpScreen = ({ navigation }) => {
         <Text style={styles.subtitle}>Create your account</Text>
 
         <View style={styles.form}>
-          <Text style={styles.label}>Full Name</Text>
+          <Text style={styles.label}>First Name</Text>
           <TextInput
-            style={[styles.input, errors.name && styles.inputError]}
-            placeholder="Enter your full name"
+            style={[styles.input, errors.firstName && styles.inputError]}
+            placeholder="Enter your first name"
             placeholderTextColor="#999"
-            value={name}
-            onChangeText={(t) => { setName(t); clearError("name"); }}
+            value={firstName}
+            onChangeText={(t) => { setFirstName(t); clearError("firstName"); }}
           />
-          {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+          {errors.firstName && <Text style={styles.errorText}>{errors.firstName}</Text>}
+
+          <Text style={styles.label}>Last Name</Text>
+          <TextInput
+            style={[styles.input, errors.lastName && styles.inputError]}
+            placeholder="Enter your last name"
+            placeholderTextColor="#999"
+            value={lastName}
+            onChangeText={(t) => { setLastName(t); clearError("lastName"); }}
+          />
+          {errors.lastName && <Text style={styles.errorText}>{errors.lastName}</Text>}
 
           <Text style={styles.label}>Email</Text>
           <TextInput
@@ -87,25 +102,41 @@ const SignUpScreen = ({ navigation }) => {
           {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
           <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={[styles.input, errors.password && styles.inputError]}
-            placeholder="Min 6 characters"
-            placeholderTextColor="#999"
-            value={password}
-            onChangeText={(t) => { setPassword(t); clearError("password"); }}
-            secureTextEntry
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={[styles.input, styles.passwordInput, errors.password && styles.inputError]}
+              placeholder="Min 6 characters"
+              placeholderTextColor="#999"
+              value={password}
+              onChangeText={(t) => { setPassword(t); clearError("password"); }}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity
+              style={styles.eyeIcon}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <Ionicons name={showPassword ? "eye-off" : "eye"} size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
           {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
 
           <Text style={styles.label}>Confirm Password</Text>
-          <TextInput
-            style={[styles.input, errors.confirmPassword && styles.inputError]}
-            placeholder="Re-enter password"
-            placeholderTextColor="#999"
-            value={confirmPassword}
-            onChangeText={(t) => { setConfirmPassword(t); clearError("confirmPassword"); }}
-            secureTextEntry
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={[styles.input, styles.passwordInput, errors.confirmPassword && styles.inputError]}
+              placeholder="Re-enter password"
+              placeholderTextColor="#999"
+              value={confirmPassword}
+              onChangeText={(t) => { setConfirmPassword(t); clearError("confirmPassword"); }}
+              secureTextEntry={!showConfirmPassword}
+            />
+             <TouchableOpacity
+              style={styles.eyeIcon}
+              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+            >
+              <Ionicons name={showConfirmPassword ? "eye-off" : "eye"} size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
           {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
 
           <TouchableOpacity
@@ -178,6 +209,20 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: "#E74C3C",
+  },
+  passwordContainer: {
+    position: 'relative',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  passwordInput: {
+    marginBottom: 0,
+    paddingRight: 50,
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 15,
+    top: 14,
   },
   errorText: {
     color: "#E74C3C",
