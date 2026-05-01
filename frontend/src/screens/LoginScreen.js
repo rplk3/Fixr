@@ -46,9 +46,10 @@ const LoginScreen = ({ navigation }) => {
       setSuccessMsg("");
       const data = await loginUser(email.trim(), password);
       
-      setSuccessMsg("Login successful! Rediriecting...");
+      setSuccessMsg("Login successful! Redirecting...");
+      const isAdmin = data.user?.roles?.includes("admin");
       setTimeout(() => {
-        navigation.replace("Services");
+        navigation.replace(isAdmin ? "AdminDashboard" : "Services");
       }, 1000);
     } catch (error) {
       setApiError(error.message);
