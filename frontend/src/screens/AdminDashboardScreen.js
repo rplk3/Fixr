@@ -9,6 +9,7 @@ import {
   getAdminBookings, getAdminProviders, updateProviderStatus, deleteAdminProvider,
   getAdminPayments, getAdminReviews, deleteAdminReview,
 } from "../services/adminApi";
+import { setToken, setUser } from "../services/authApi";
 
 const { width } = Dimensions.get("window");
 const SIDEBAR_W = width * 0.7;
@@ -111,6 +112,13 @@ const AdminDashboardScreen = ({ navigation }) => {
   useEffect(() => { load(page); }, [page]);
 
   const selectPage = (key) => { setPage(key); setSidebarOpen(false); };
+
+  const handleLogout = () => {
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Sign Out", style: "destructive", onPress: () => { setToken(null); setUser(null); navigation.replace("Login"); } },
+    ]);
+  };
 
   const handleDeleteService = (id) => {
     Alert.alert("Delete", "Delete this service?", [
@@ -255,7 +263,7 @@ const AdminDashboardScreen = ({ navigation }) => {
           <Text style={s.headerTitle}>{MENU.find((m) => m.key === page)?.label}</Text>
           <Text style={s.headerSub}>{SUBTITLES[page]}</Text>
         </View>
-        <TouchableOpacity onPress={() => navigation.replace("Login")} style={s.logoutBtn}>
+        <TouchableOpacity onPress={handleLogout} style={s.logoutBtn}>
           <Ionicons name="log-out-outline" size={22} color="#fff" />
         </TouchableOpacity>
       </View>
