@@ -1,20 +1,16 @@
 import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  SafeAreaView,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
+  View, Text, StyleSheet, FlatList, SafeAreaView, TextInput,
+  TouchableOpacity, ActivityIndicator, Alert, Modal, Dimensions,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import ServiceCard from "../components/ServiceCard";
 import { getAllServices } from "../services/serviceApi";
-import { getUser } from "../services/authApi";
+import { getUser, setToken, setUser } from "../services/authApi";
 import { Ionicons } from "@expo/vector-icons";
+
+const { width } = Dimensions.get("window");
+const SIDEBAR_W = width * 0.72;
 
 const ServicesListScreen = () => {
   const navigation = useNavigation();
@@ -23,12 +19,15 @@ const ServicesListScreen = () => {
   const [error, setError] = useState("");
   const [providerStatus, setProviderStatus] = useState("none");
   const [hasProviderRole, setHasProviderRole] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setLocalUser] = useState(null);
 
   useEffect(() => {
-    const user = getUser();
-    if (user) {
-      setProviderStatus(user.providerStatus || "none");
-      setHasProviderRole(user.roles?.includes('provider'));
+    const u = getUser();
+    if (u) {
+      setLocalUser(u);
+      setProviderStatus(u.providerStatus || "none");
+      setHasProviderRole(u.roles?.includes("provider"));
     }
     fetchServices();
   }, []);
@@ -50,23 +49,53 @@ const ServicesListScreen = () => {
     navigation.navigate("Onboarding");
   };
 
+  const handleSwitchProvider = () => {
+    setSidebarOpen(false);
+    Alert.alert(
+      "Switch Mode",
+      "Are you sure you want to switch to Provider Mode?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Yes, Switch", onPress: () => navigation.replace("ProviderDashboard") },
+      ]
+    );
+  };
+
+  const handleSignOut = () => {
+    setSidebarOpen(false);
+    Alert.alert(
+      "Sign Out",
+      "Are you sure you want to sign out?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign Out", style: "destructive",
+          onPress: () => {
+            setToken(null);
+            setUser(null);
+            navigation.replace("Login");
+          },
+        },
+      ]
+    );
+  };
+
+  const handleMyProfile = () => {
+    setSidebarOpen(false);
+    Alert.alert("My Profile", `Name: ${user?.firstName || ""} ${user?.lastName || ""}\nEmail: ${user?.email || ""}\nRoles: ${(user?.roles || []).join(", ")}\nProvider Status: ${user?.providerStatus || "none"}`, [{ text: "OK" }]);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header with hamburger */}
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => setSidebarOpen(true)} style={styles.menuBtn}>
+          <Ionicons name="menu" size={28} color="#135E4B" />
+        </TouchableOpacity>
         <View style={styles.headerTextContainer}>
           <Text style={styles.greeting}>Find the best services</Text>
           <Text style={styles.subText}>Fixr helps you book trusted workers</Text>
         </View>
-        
-        {hasProviderRole && (
-          <TouchableOpacity
-            style={styles.switchButton}
-            onPress={() => navigation.replace("ProviderDashboard")}
-          >
-            <Ionicons name="swap-horizontal" size={20} color="#fff" />
-            <Text style={styles.switchButtonText}>Provider Mode</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       <View style={styles.searchContainer}>
@@ -78,13 +107,8 @@ const ServicesListScreen = () => {
       </View>
 
       {providerStatus === "none" && !hasProviderRole && (
-        <TouchableOpacity
-          style={styles.providerButton}
-          onPress={handleApplyProvider}
-        >
-          <Text style={styles.providerButtonText}>
-            🚀 Become a Service Provider
-          </Text>
+        <TouchableOpacity style={styles.providerButton} onPress={handleApplyProvider}>
+          <Text style={styles.providerButtonText}>🚀 Become a Service Provider</Text>
         </TouchableOpacity>
       )}
 
@@ -122,6 +146,50 @@ const ServicesListScreen = () => {
           }
         />
       )}
+
+      {/* Sidebar Modal */}
+      <Modal visible={sidebarOpen} transparent animationType="fade" onRequestClose={() => setSidebarOpen(false)}>
+        <View style={styles.overlay}>
+          <TouchableOpacity style={styles.overlayBg} activeOpacity={1} onPress={() => setSidebarOpen(false)} />
+          <View style={styles.sidebar}>
+            {/* Profile Section */}
+            <View style={styles.sidebarProfile}>
+              <View style={styles.avatarCircle}>
+                <Ionicons name="person" size={36} color="#fff" />
+              </View>
+              <Text style={styles.profileName}>{user?.firstName || "User"} {user?.lastName || ""}</Text>
+              <Text style={styles.profileEmail}>{user?.email || ""}</Text>
+            </View>
+
+            {/* Menu Items */}
+            <TouchableOpacity style={styles.sidebarItem} onPress={handleMyProfile}>
+              <Ionicons name="person-circle-outline" size={22} color="#A8D5BA" />
+              <Text style={styles.sidebarLabel}>My Profile</Text>
+            </TouchableOpacity>
+
+            {hasProviderRole && (
+              <TouchableOpacity style={styles.sidebarItem} onPress={handleSwitchProvider}>
+                <Ionicons name="swap-horizontal-outline" size={22} color="#A8D5BA" />
+                <Text style={styles.sidebarLabel}>Provider Mode</Text>
+              </TouchableOpacity>
+            )}
+
+            {providerStatus === "none" && !hasProviderRole && (
+              <TouchableOpacity style={styles.sidebarItem} onPress={() => { setSidebarOpen(false); handleApplyProvider(); }}>
+                <Ionicons name="rocket-outline" size={22} color="#A8D5BA" />
+                <Text style={styles.sidebarLabel}>Become a Provider</Text>
+              </TouchableOpacity>
+            )}
+
+            <View style={styles.sidebarDivider} />
+
+            <TouchableOpacity style={styles.sidebarItem} onPress={handleSignOut}>
+              <Ionicons name="log-out-outline" size={22} color="#FF6B6B" />
+              <Text style={[styles.sidebarLabel, { color: "#FF6B6B" }]}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -129,108 +197,58 @@ const ServicesListScreen = () => {
 export default ServicesListScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#CCDCDB",
-    paddingHorizontal: 16,
-  },
-  header: {
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  greeting: {
-    fontSize: 26,
-    fontWeight: "bold",
-    color: "#135E4B",
-  },
-  subText: {
-    fontSize: 14,
-    color: "#4CB572",
-    marginTop: 6,
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  switchButton: {
-    flexDirection: "row",
-    backgroundColor: "#135E4B",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: "center",
-    marginLeft: 10,
-  },
-  switchButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 12,
-    marginLeft: 6,
-  },
-  searchContainer: {
-    marginBottom: 12,
-  },
+  container: { flex: 1, backgroundColor: "#CCDCDB", paddingHorizontal: 16 },
+  header: { marginTop: 20, marginBottom: 20, flexDirection: "row", alignItems: "center" },
+  menuBtn: { marginRight: 12, padding: 4 },
+  greeting: { fontSize: 24, fontWeight: "bold", color: "#135E4B" },
+  subText: { fontSize: 14, color: "#4CB572", marginTop: 4 },
+  headerTextContainer: { flex: 1 },
+  searchContainer: { marginBottom: 12 },
   searchInput: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: "#135E4B",
+    backgroundColor: "#FFFFFF", borderRadius: 12, paddingHorizontal: 15,
+    paddingVertical: 12, fontSize: 15, color: "#135E4B",
   },
   providerButton: {
-    backgroundColor: "#135E4B",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    marginBottom: 12,
+    backgroundColor: "#135E4B", paddingVertical: 14, borderRadius: 12,
+    alignItems: "center", marginBottom: 12,
   },
-  providerButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 15,
-  },
+  providerButtonText: { color: "#fff", fontWeight: "bold", fontSize: 15 },
   pendingBanner: {
-    backgroundColor: "#FFF3CD",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    marginBottom: 12,
+    backgroundColor: "#FFF3CD", paddingVertical: 10, paddingHorizontal: 14,
+    borderRadius: 10, marginBottom: 12,
   },
-  pendingText: {
-    color: "#856404",
-    fontSize: 13,
-    textAlign: "center",
-    fontWeight: "600",
-  },
+  pendingText: { color: "#856404", fontSize: 13, textAlign: "center", fontWeight: "600" },
   sectionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15,
+    flexDirection: "row", justifyContent: "space-between",
+    alignItems: "center", marginBottom: 15,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#135E4B",
+  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#135E4B" },
+  viewAll: { fontSize: 14, fontWeight: "600", color: "#4CB572" },
+  listContent: { paddingBottom: 20 },
+  errorText: { color: "red", fontSize: 14, marginTop: 20, textAlign: "center" },
+  emptyText: { color: "#135E4B", fontSize: 15, textAlign: "center", marginTop: 30 },
+  // Sidebar
+  overlay: { flex: 1, flexDirection: "row" },
+  overlayBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)" },
+  sidebar: {
+    position: "absolute", left: 0, top: 0, bottom: 0, width: SIDEBAR_W,
+    backgroundColor: "#135E4B", paddingTop: 50,
   },
-  viewAll: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#4CB572",
+  sidebarProfile: {
+    alignItems: "center", paddingVertical: 24, borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.15)", marginBottom: 10,
   },
-  listContent: {
-    paddingBottom: 20,
+  avatarCircle: {
+    width: 72, height: 72, borderRadius: 36, backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center", justifyContent: "center", marginBottom: 10,
   },
-  errorText: {
-    color: "red",
-    fontSize: 14,
-    marginTop: 20,
-    textAlign: "center",
+  profileName: { fontSize: 18, fontWeight: "bold", color: "#fff" },
+  profileEmail: { fontSize: 13, color: "#A8D5BA", marginTop: 4 },
+  sidebarItem: {
+    flexDirection: "row", alignItems: "center", paddingVertical: 15, paddingHorizontal: 24,
   },
-  emptyText: {
-    color: "#135E4B",
-    fontSize: 15,
-    textAlign: "center",
-    marginTop: 30,
+  sidebarLabel: { fontSize: 16, color: "#A8D5BA", marginLeft: 14, fontWeight: "600" },
+  sidebarDivider: {
+    height: 1, backgroundColor: "rgba(255,255,255,0.15)", marginVertical: 10, marginHorizontal: 20,
   },
 });
