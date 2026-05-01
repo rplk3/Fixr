@@ -51,38 +51,48 @@ const ServicesListScreen = () => {
 
   const handleSwitchProvider = () => {
     setSidebarOpen(false);
-    Alert.alert(
-      "Switch Mode",
-      "Are you sure you want to switch to Provider Mode?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Yes, Switch", onPress: () => navigation.replace("ProviderDashboard") },
-      ]
-    );
+    setTimeout(() => {
+      Alert.alert(
+        "Switch Mode",
+        "Are you sure you want to switch to Provider Mode?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Yes, Switch", onPress: () => navigation.replace("ProviderDashboard") },
+        ]
+      );
+    }, 400);
   };
 
   const handleSignOut = () => {
     setSidebarOpen(false);
-    Alert.alert(
-      "Sign Out",
-      "Are you sure you want to sign out?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Sign Out", style: "destructive",
-          onPress: () => {
-            setToken(null);
-            setUser(null);
-            navigation.replace("Login");
+    setTimeout(() => {
+      Alert.alert(
+        "Sign Out",
+        "Are you sure you want to sign out?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Sign Out", style: "destructive",
+            onPress: () => {
+              setToken(null);
+              setUser(null);
+              navigation.replace("Login");
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }, 400);
   };
 
   const handleMyProfile = () => {
     setSidebarOpen(false);
-    Alert.alert("My Profile", `Name: ${user?.firstName || ""} ${user?.lastName || ""}\nEmail: ${user?.email || ""}\nRoles: ${(user?.roles || []).join(", ")}\nProvider Status: ${user?.providerStatus || "none"}`, [{ text: "OK" }]);
+    setTimeout(() => {
+      Alert.alert(
+        "My Profile",
+        `Name: ${user?.firstName || ""} ${user?.lastName || ""}\nEmail: ${user?.email || ""}\nRoles: ${(user?.roles || []).join(", ")}\nProvider Status: ${user?.providerStatus || "none"}`,
+        [{ text: "OK" }]
+      );
+    }, 400);
   };
 
   return (
