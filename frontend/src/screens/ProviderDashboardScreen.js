@@ -8,11 +8,16 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { crossAlert } from "../utils/alert";
 import { getMyServices, updateService, deleteService, createService } from "../services/serviceApi";
+import { getProviderBookings, updateBookingStatus } from "../services/bookingApi";
 
 const ProviderDashboardScreen = () => {
   const navigation = useNavigation();
   const [services, setServices] = useState([]);
+  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("services"); // "services" or "bookings"
+
+  // Modal State
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState("add");
   const [editId, setEditId] = useState(null);
@@ -23,18 +28,24 @@ const ProviderDashboardScreen = () => {
   const [location, setLocation] = useState("");
   const [imageUri, setImageUri] = useState("");
 
-  const fetchMyServices = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getMyServices();
-      setServices(data);
+      const [servicesData, bookingsData] = await Promise.all([
+        getMyServices(),
+        getProviderBookings()
+      ]);
+      setServices(servicesData);
+      setBookings(bookingsData);
     } catch (e) {
       crossAlert("Error", e.message);
     }
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchMyServices(); }, []);
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const activeBookingsCount = bookings.filter(b => b.status === "pending" || b.status === "confirmed").length;
 
   const resetForm = () => {
     setTitle(""); setDescription(""); setCategory(""); setPrice(""); setLocation(""); setImageUri("");
@@ -95,7 +106,7 @@ const ProviderDashboardScreen = () => {
         crossAlert("Success", "Service created successfully!");
       }
       setModalVisible(false);
-      fetchMyServices();
+      fetchData();
     } catch (e) {
       crossAlert("Error", e.message);
     }
@@ -113,12 +124,34 @@ const ProviderDashboardScreen = () => {
             try {
               await deleteService(id);
               crossAlert("Deleted", "Service has been removed.");
-              fetchMyServices();
+              fetchData();
             } catch (e) { crossAlert("Error", e.message); }
           },
         },
       ]
     );
+  };
+
+  const handleBookingAction = (id, status, actionName) => {
+    crossAlert(
+      `${actionName} Booking`,
+      `Are you sure you want to ${actionName.toLowerCase()} this booking?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Yes",
+          onPress: async () => {
+            try {
+              await updateBookingStatus(id, status);
+              crossAlert("Success", `Booking has been ${status}.`);
+              fetchData();
+            } catch (e) {
+              crossAlert("Error", e.message);
+            }
+          }
+        }
+      ]
+    )
   };
 
   const handleSwitchToCustomer = () => {
@@ -159,6 +192,67 @@ const ProviderDashboardScreen = () => {
     </View>
   );
 
+  const renderBooking = ({ item }) => (
+    <View style={st.serviceCard}>
+      <View style={st.serviceBody}>
+        <View style={{ flex: 1 }}>
+          <View style={st.bookingHeader}>
+            <Text style={st.serviceTitle}>{item.service?.title || "Service"}</Text>
+            <View style={[st.badge, st[`badge_${item.status}`]]}>
+              <Text style={st.badgeText}>{item.status.toUpperCase()}</Text>
+            </View>
+          </View>
+          
+          <Text style={st.serviceSub}>
+            Customer: {item.customer?.firstName} {item.customer?.lastName}
+          </Text>
+          <Text style={st.serviceDesc}>
+            <Ionicons name="call-outline" size={12} /> {item.phone || "N/A"}
+          </Text>
+          
+          <View style={{ marginTop: 8 }}>
+            <View style={st.row}>
+              <Ionicons name="calendar-outline" size={14} color="#666" />
+              <Text style={st.infoText}>{item.date}</Text>
+            </View>
+            <View style={st.row}>
+              <Ionicons name="time-outline" size={14} color="#666" />
+              <Text style={st.infoText}>{item.time}</Text>
+            </View>
+            <View style={st.row}>
+              <Ionicons name="location-outline" size={14} color="#666" />
+              <Text style={st.infoText}>{item.location}</Text>
+            </View>
+          </View>
+
+          {item.notes ? (
+            <Text style={st.notesBox}><Text style={{fontWeight: 'bold'}}>Notes:</Text> {item.notes}</Text>
+          ) : null}
+          
+          {item.status === "pending" && (
+            <View style={st.bookingActionRow}>
+              <TouchableOpacity 
+                style={[st.actionBtn, { backgroundColor: "#EF4444", flex: 1, marginRight: 6 }]} 
+                onPress={() => handleBookingAction(item._id, "cancelled", "Reject")}
+              >
+                <Ionicons name="close-circle-outline" size={18} color="#fff" />
+                <Text style={st.actionBtnText}>Reject</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[st.actionBtn, { backgroundColor: "#4CB572", flex: 1, marginLeft: 6 }]} 
+                onPress={() => handleBookingAction(item._id, "confirmed", "Accept")}
+              >
+                <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+                <Text style={st.actionBtnText}>Accept</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+        </View>
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={st.container}>
       {/* Header */}
@@ -180,36 +274,78 @@ const ProviderDashboardScreen = () => {
           <Text style={st.statLabel}>My Services</Text>
         </View>
         <View style={st.statCard}>
-          <Text style={st.statNumber}>0</Text>
+          <Text style={st.statNumber}>{activeBookingsCount}</Text>
           <Text style={st.statLabel}>Active Bookings</Text>
         </View>
       </View>
 
-      {/* My Services Section */}
-      <View style={st.sectionHeader}>
-        <Text style={st.sectionTitle}>My Services</Text>
-        <TouchableOpacity style={st.addBtn} onPress={openAdd}>
-          <Ionicons name="add-circle" size={20} color="#fff" />
-          <Text style={st.addBtnText}>Add Service</Text>
+      {/* Tabs */}
+      <View style={st.tabsContainer}>
+        <TouchableOpacity 
+          style={[st.tabBtn, activeTab === "services" && st.tabBtnActive]}
+          onPress={() => setActiveTab("services")}
+        >
+          <Text style={[st.tabBtnText, activeTab === "services" && st.tabBtnTextActive]}>My Services</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[st.tabBtn, activeTab === "bookings" && st.tabBtnActive]}
+          onPress={() => setActiveTab("bookings")}
+        >
+          <Text style={[st.tabBtnText, activeTab === "bookings" && st.tabBtnTextActive]}>Bookings Requests</Text>
         </TouchableOpacity>
       </View>
 
-      {loading ? (
-        <ActivityIndicator size="large" color="#135E4B" style={{ marginTop: 30 }} />
-      ) : services.length === 0 ? (
-        <View style={st.emptyState}>
-          <Ionicons name="folder-open-outline" size={60} color="#135E4B" />
-          <Text style={st.emptyTitle}>No services yet</Text>
-          <Text style={st.emptyDesc}>Tap "Add Service" to create your first listing</Text>
-        </View>
+      {/* Content */}
+      {activeTab === "services" ? (
+        <>
+          <View style={st.sectionHeader}>
+            <Text style={st.sectionTitle}>My Services</Text>
+            <TouchableOpacity style={st.addBtn} onPress={openAdd}>
+              <Ionicons name="add-circle" size={20} color="#fff" />
+              <Text style={st.addBtnText}>Add Service</Text>
+            </TouchableOpacity>
+          </View>
+          {loading ? (
+            <ActivityIndicator size="large" color="#135E4B" style={{ marginTop: 30 }} />
+          ) : services.length === 0 ? (
+            <View style={st.emptyState}>
+              <Ionicons name="folder-open-outline" size={60} color="#135E4B" />
+              <Text style={st.emptyTitle}>No services yet</Text>
+              <Text style={st.emptyDesc}>Tap "Add Service" to create your first listing</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={services}
+              keyExtractor={(item) => item._id}
+              renderItem={renderService}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
+              refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchData} />}
+            />
+          )}
+        </>
       ) : (
-        <FlatList
-          data={services}
-          keyExtractor={(item) => item._id}
-          renderItem={renderService}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
-          refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchMyServices} />}
-        />
+        <>
+          <View style={st.sectionHeader}>
+            <Text style={st.sectionTitle}>Booking Requests</Text>
+          </View>
+          {loading ? (
+            <ActivityIndicator size="large" color="#135E4B" style={{ marginTop: 30 }} />
+          ) : bookings.length === 0 ? (
+            <View style={st.emptyState}>
+              <Ionicons name="calendar-outline" size={60} color="#135E4B" />
+              <Text style={st.emptyTitle}>No booking requests</Text>
+              <Text style={st.emptyDesc}>You have no bookings right now.</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={bookings}
+              keyExtractor={(item) => item._id}
+              renderItem={renderBooking}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
+              refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchData} />}
+            />
+          )}
+        </>
       )}
 
       {/* Add/Edit Modal */}
@@ -286,6 +422,14 @@ const st = StyleSheet.create({
   },
   statNumber: { fontSize: 24, fontWeight: "bold", color: "#135E4B", marginBottom: 4 },
   statLabel: { fontSize: 13, color: "#666" },
+  tabsContainer: {
+    flexDirection: "row", marginHorizontal: 16, marginBottom: 16, backgroundColor: "#E0ECEB",
+    borderRadius: 10, padding: 4
+  },
+  tabBtn: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 8 },
+  tabBtnActive: { backgroundColor: "#fff", elevation: 1 },
+  tabBtnText: { fontSize: 14, fontWeight: "600", color: "#666" },
+  tabBtnTextActive: { color: "#135E4B" },
   sectionHeader: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
     paddingHorizontal: 16, marginBottom: 12,
@@ -311,7 +455,18 @@ const st = StyleSheet.create({
   badge: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginTop: 6 },
   badgeGreen: { backgroundColor: "#D1FAE5" },
   badgeRed: { backgroundColor: "#FEE2E2" },
+  badge_pending: { backgroundColor: "#FEF3C7" },
+  badge_confirmed: { backgroundColor: "#D1FAE5" },
+  badge_completed: { backgroundColor: "#DBEAFE" },
+  badge_cancelled: { backgroundColor: "#FEE2E2" },
   badgeText: { fontSize: 10, fontWeight: "bold", color: "#333" },
+  bookingHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  row: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+  infoText: { fontSize: 13, color: "#666", marginLeft: 6 },
+  notesBox: { backgroundColor: "#F9FAFB", padding: 10, borderRadius: 8, marginTop: 8, fontSize: 13, color: "#555" },
+  bookingActionRow: { flexDirection: "row", marginTop: 14 },
+  actionBtn: { flexDirection: "row", padding: 10, borderRadius: 8, justifyContent: "center", alignItems: "center" },
+  actionBtnText: { color: "#fff", fontWeight: "bold", marginLeft: 6, fontSize: 14 },
   emptyState: { backgroundColor: "#fff", borderRadius: 16, padding: 40, alignItems: "center", margin: 16 },
   emptyTitle: { fontSize: 18, fontWeight: "bold", color: "#135E4B", marginTop: 15 },
   emptyDesc: { fontSize: 14, color: "#666", textAlign: "center", marginTop: 10, lineHeight: 20 },
