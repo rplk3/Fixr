@@ -10,6 +10,7 @@ import AddServiceScreen from "../screens/AddServiceScreen";
 import OnboardingScreen from "../screens/OnboardingScreen";
 import ProviderDashboardScreen from "../screens/ProviderDashboardScreen";
 import AdminDashboardScreen from "../screens/AdminDashboardScreen";
+import BookingScreen from "../screens/BookingScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -26,7 +27,7 @@ const AppNavigator = () => {
         <Stack.Screen
           name="Services"
           component={ServicesListScreen}
-          options={{ headerShown: true, title: "Services", headerLeft: () => null }}
+          options={{ headerShown: false }}
         />
         <Stack.Screen
           name="Details"
@@ -52,6 +53,11 @@ const AppNavigator = () => {
           name="AdminDashboard"
           component={AdminDashboardScreen}
           options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Booking"
+          component={BookingScreen}
+          options={{ headerShown: true, title: "Book Service" }}
         />
       </Stack.Navigator>
     </NavigationContainer>
