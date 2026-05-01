@@ -17,6 +17,22 @@ const getServices = async (req, res) => {
   }
 };
 
+// @desc    Get services owned by logged-in provider
+// @route   GET /api/services/my
+// @access  Private
+const getMyServices = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id;
+    const services = await Service.find({ provider: userId }).sort({ createdAt: -1 });
+    res.status(200).json(services);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch your services",
+      error: error.message,
+    });
+  }
+};
+
 // @desc    Create a new service
 // @route   POST /api/services
 // @access  Private
@@ -161,6 +177,7 @@ const deleteService = async (req, res) => {
 };
 module.exports = {
   getServices,
+  getMyServices,
   createService,
   getServiceById,
   updateService,

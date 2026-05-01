@@ -6,7 +6,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import {
   getAdminDashboard, getAdminServices, deleteAdminService,
-  getAdminBookings, getAdminProviders, updateProviderStatus,
+  getAdminBookings, getAdminProviders, updateProviderStatus, deleteAdminProvider,
   getAdminPayments, getAdminReviews, deleteAdminReview,
 } from "../services/adminApi";
 
@@ -131,6 +131,13 @@ const AdminDashboardScreen = ({ navigation }) => {
     ]);
   };
 
+  const handleDeleteProvider = (id) => {
+    Alert.alert("Delete Provider", "This will remove the provider profile and revoke their provider role. Continue?", [
+      { text: "Cancel" },
+      { text: "Delete", style: "destructive", onPress: async () => { try { await deleteAdminProvider(id); load("providers"); } catch (e) { Alert.alert("Error", e.message); } } },
+    ]);
+  };
+
   // ─── Render Page Content ───
   const renderContent = () => {
     switch (page) {
@@ -190,6 +197,9 @@ const AdminDashboardScreen = ({ navigation }) => {
                       </TouchableOpacity>
                     </View>
                   )}
+                  <TouchableOpacity onPress={() => handleDeleteProvider(item._id)} style={s.delBtn}>
+                    <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                  </TouchableOpacity>
                 </View>
               );
             }}

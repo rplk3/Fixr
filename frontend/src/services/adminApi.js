@@ -57,6 +57,13 @@ export const updateProviderStatus = async (id, status) => {
   return data;
 };
 
+export const deleteAdminProvider = async (id) => {
+  const res = await fetch(`${BASE_URL}/admin/providers/${id}`, { method: "DELETE", headers: authHeaders() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to delete provider");
+  return data;
+};
+
 // Payments
 export const getAdminPayments = async () => {
   const res = await fetch(`${BASE_URL}/admin/payments`, { headers: authHeaders() });

@@ -9,6 +9,7 @@ const {
   getAllBookings,
   getAllProviders,
   updateProviderStatus,
+  deleteProvider,
   getAllPayments,
   getAllReviews,
   deleteReview,
@@ -31,6 +32,7 @@ router.get("/bookings", getAllBookings);
 // Providers (Worker Profiles)
 router.get("/providers", getAllProviders);
 router.put("/providers/:id/status", updateProviderStatus);
+router.delete("/providers/:id", deleteProvider);
 
 // Payments (Financial Records)
 router.get("/payments", getAllPayments);

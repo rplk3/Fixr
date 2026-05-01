@@ -132,6 +132,25 @@ exports.updateProviderStatus = async (req, res) => {
   }
 };
 
+exports.deleteProvider = async (req, res) => {
+  try {
+    const provider = await Provider.findById(req.params.id);
+    if (!provider) return res.status(404).json({ message: "Provider not found" });
+
+    const user = await User.findById(provider.user);
+    if (user) {
+      user.roles = user.roles.filter((r) => r !== "provider");
+      user.providerStatus = "none";
+      await user.save();
+    }
+
+    await provider.deleteOne();
+    res.status(200).json({ message: "Provider deleted" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // ──────────────────────────────────────────────
 // PAYMENTS / FINANCIAL RECORDS
 // ──────────────────────────────────────────────
