@@ -9,6 +9,7 @@ import ServiceDetailsScreen from "../screens/ServiceDetailsScreen";
 import AddServiceScreen from "../screens/AddServiceScreen";
 import OnboardingScreen from "../screens/OnboardingScreen";
 import ProviderDashboardScreen from "../screens/ProviderDashboardScreen";
+import AdminDashboardScreen from "../screens/AdminDashboardScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -45,6 +46,11 @@ const AppNavigator = () => {
         <Stack.Screen
           name="ProviderDashboard"
           component={ProviderDashboardScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AdminDashboard"
+          component={AdminDashboardScreen}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>
