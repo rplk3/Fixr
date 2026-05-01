@@ -11,6 +11,8 @@ import OnboardingScreen from "../screens/OnboardingScreen";
 import ProviderDashboardScreen from "../screens/ProviderDashboardScreen";
 import AdminDashboardScreen from "../screens/AdminDashboardScreen";
 import BookingScreen from "../screens/BookingScreen";
+import MyBookingsScreen from "../screens/MyBookingsScreen";
+import PaymentScreen from "../screens/PaymentScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -58,6 +60,16 @@ const AppNavigator = () => {
           name="Booking"
           component={BookingScreen}
           options={{ headerShown: true, title: "Book Service" }}
+        />
+        <Stack.Screen
+          name="MyBookings"
+          component={MyBookingsScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Payment"
+          component={PaymentScreen}
+          options={{ headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>

@@ -5,10 +5,16 @@ import {
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { crossAlert } from "../utils/alert";
 import { createBooking } from "../services/bookingApi";
 import { getUser } from "../services/authApi";
+import { WebDateInput, WebTimeInput } from "../components/WebInputs";
+
+// Only import DateTimePicker on native platforms
+let DateTimePicker = null;
+if (Platform.OS !== "web") {
+  DateTimePicker = require("@react-native-community/datetimepicker").default;
+}
 
 const BookingScreen = () => {
   const navigation = useNavigation();
@@ -18,9 +24,12 @@ const BookingScreen = () => {
 
   // Date & Time state
   const [date, setDate] = useState(null);
-  const [time, setTime] = useState(null);
+  const [startTime, setStartTime] = useState(null);
+  const [endTime, setEndTime] = useState(null);
+  
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
   // Form state
   const [location, setLocation] = useState("");
@@ -34,10 +43,9 @@ const BookingScreen = () => {
 
   // ── Date Picker Handler ──
   const onDateChange = (event, selectedDate) => {
-    setShowDatePicker(Platform.OS === "ios"); // keep open on iOS
+    setShowDatePicker(Platform.OS === "ios");
     if (event.type === "dismissed") return;
     if (selectedDate) {
-      // Check if date is in the past
       const selected = new Date(selectedDate);
       selected.setHours(0, 0, 0, 0);
       if (selected < today) {
@@ -48,29 +56,50 @@ const BookingScreen = () => {
     }
   };
 
-  // ── Time Picker Handler ──
-  const onTimeChange = (event, selectedTime) => {
-    setShowTimePicker(Platform.OS === "ios"); // keep open on iOS
-    if (event.type === "dismissed") return;
-    if (selectedTime) {
-      // If selected date is today, check if time is in the past
-      if (date) {
-        const now = new Date();
-        const selDate = new Date(date);
-        selDate.setHours(0, 0, 0, 0);
-        const todayCopy = new Date();
-        todayCopy.setHours(0, 0, 0, 0);
+  const validateTime = (selectedTime) => {
+    if (date) {
+      const now = new Date();
+      const selDate = new Date(date);
+      selDate.setHours(0, 0, 0, 0);
+      const todayCopy = new Date();
+      todayCopy.setHours(0, 0, 0, 0);
 
-        if (selDate.getTime() === todayCopy.getTime()) {
-          // Same day — check time
-          if (selectedTime.getHours() < now.getHours() ||
-            (selectedTime.getHours() === now.getHours() && selectedTime.getMinutes() <= now.getMinutes())) {
-            crossAlert("Invalid Time", "You cannot select a past time for today. Please choose a later time.");
-            return;
-          }
+      if (selDate.getTime() === todayCopy.getTime()) {
+        if (selectedTime.getHours() < now.getHours() ||
+          (selectedTime.getHours() === now.getHours() && selectedTime.getMinutes() <= now.getMinutes())) {
+          return false;
         }
       }
-      setTime(selectedTime);
+    }
+    return true;
+  };
+
+  // ── Time Picker Handlers ──
+  const onStartTimeChange = (event, selectedTime) => {
+    setShowStartTimePicker(Platform.OS === "ios");
+    if (event.type === "dismissed") return;
+    if (selectedTime) {
+      if (!validateTime(selectedTime)) {
+        crossAlert("Invalid Time", "You cannot select a past time for today.");
+        return;
+      }
+      setStartTime(selectedTime);
+    }
+  };
+
+  const onEndTimeChange = (event, selectedTime) => {
+    setShowEndTimePicker(Platform.OS === "ios");
+    if (event.type === "dismissed") return;
+    if (selectedTime) {
+      if (!validateTime(selectedTime)) {
+        crossAlert("Invalid Time", "You cannot select a past time for today.");
+        return;
+      }
+      if (startTime && selectedTime <= startTime) {
+        crossAlert("Invalid Time", "End time must be after start time.");
+        return;
+      }
+      setEndTime(selectedTime);
     }
   };
 
@@ -91,10 +120,16 @@ const BookingScreen = () => {
     return `${h}:${m} ${ampm}`;
   };
 
+  const formatTimeWeb = (t) => {
+    if (!t) return "";
+    return `${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`;
+  };
+
   // ── Validation & Submit ──
   const handleConfirm = async () => {
     if (!date) return crossAlert("Missing Date", "Please select a date for the service.");
-    if (!time) return crossAlert("Missing Time", "Please select a preferred time slot.");
+    if (!startTime) return crossAlert("Missing Start Time", "Please select a start time.");
+    if (!endTime) return crossAlert("Missing End Time", "Please select an end time.");
     if (!location.trim()) return crossAlert("Missing Location", "Please enter your address/location.");
     if (location.trim().length > 50) return crossAlert("Location Too Long", "Location must be 50 characters or less.");
     if (!phone.trim()) return crossAlert("Missing Phone", "Please enter your phone number.");
@@ -102,11 +137,12 @@ const BookingScreen = () => {
 
     setLoading(true);
     try {
+      const timeString = `${formatTime(startTime)} to ${formatTime(endTime)}`;
       await createBooking({
         serviceId: service._id,
         providerId: service.provider?._id || service.provider,
         date: formatDate(date),
-        time: formatTime(time),
+        time: timeString,
         location: location.trim(),
         notes: notes.trim(),
         phone: phone.trim(),
@@ -144,38 +180,126 @@ const BookingScreen = () => {
 
         {/* Date Picker */}
         <Text style={s.label}>Date <Text style={s.required}>*</Text></Text>
-        <TouchableOpacity style={s.pickerBtn} onPress={() => setShowDatePicker(true)}>
-          <Ionicons name="calendar-outline" size={20} color="#135E4B" />
-          <Text style={[s.pickerText, !date && s.placeholderText]}>
-            {date ? formatDate(date) : "Select date"}
-          </Text>
-        </TouchableOpacity>
-        {showDatePicker && (
-          <DateTimePicker
-            value={date || new Date()}
-            mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            minimumDate={today}
-            onChange={onDateChange}
+        {Platform.OS === "web" ? (
+          <WebDateInput
+            value={date ? formatDate(date) : ""}
+            min={formatDate(today)}
+            onChange={(val) => {
+              if (val) {
+                const parts = val.split("-");
+                const selected = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                selected.setHours(0, 0, 0, 0);
+                if (selected < today) {
+                  crossAlert("Invalid Date", "You cannot select a past date.");
+                } else {
+                  setDate(selected);
+                }
+              }
+            }}
           />
+        ) : (
+          <>
+            <TouchableOpacity style={s.pickerBtn} onPress={() => setShowDatePicker(true)}>
+              <Ionicons name="calendar-outline" size={20} color="#135E4B" />
+              <Text style={[s.pickerText, !date && s.placeholderText]}>
+                {date ? formatDate(date) : "Select date"}
+              </Text>
+            </TouchableOpacity>
+            {showDatePicker && DateTimePicker && (
+              <DateTimePicker
+                value={date || new Date()}
+                mode="date"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                minimumDate={today}
+                onChange={onDateChange}
+              />
+            )}
+          </>
         )}
 
-        {/* Time Picker */}
-        <Text style={s.label}>Time <Text style={s.required}>*</Text></Text>
-        <TouchableOpacity style={s.pickerBtn} onPress={() => setShowTimePicker(true)}>
-          <Ionicons name="time-outline" size={20} color="#135E4B" />
-          <Text style={[s.pickerText, !time && s.placeholderText]}>
-            {time ? formatTime(time) : "Select time"}
-          </Text>
-        </TouchableOpacity>
-        {showTimePicker && (
-          <DateTimePicker
-            value={time || new Date()}
-            mode="time"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={onTimeChange}
-          />
-        )}
+        <View style={s.timeRow}>
+          {/* Start Time Picker */}
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <Text style={s.label}>Start Time <Text style={s.required}>*</Text></Text>
+            {Platform.OS === "web" ? (
+              <WebTimeInput
+                value={startTime ? formatTimeWeb(startTime) : ""}
+                onChange={(val) => {
+                  if (val) {
+                    const [hours, minutes] = val.split(":");
+                    const newTime = new Date();
+                    newTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                    if (!validateTime(newTime)) {
+                      crossAlert("Invalid Time", "You cannot select a past time for today.");
+                      return;
+                    }
+                    setStartTime(newTime);
+                  }
+                }}
+              />
+            ) : (
+              <>
+                <TouchableOpacity style={s.pickerBtn} onPress={() => setShowStartTimePicker(true)}>
+                  <Ionicons name="time-outline" size={20} color="#135E4B" />
+                  <Text style={[s.pickerText, !startTime && s.placeholderText]}>
+                    {startTime ? formatTime(startTime) : "Start"}
+                  </Text>
+                </TouchableOpacity>
+                {showStartTimePicker && DateTimePicker && (
+                  <DateTimePicker
+                    value={startTime || new Date()}
+                    mode="time"
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    onChange={onStartTimeChange}
+                  />
+                )}
+              </>
+            )}
+          </View>
+
+          {/* End Time Picker */}
+          <View style={{ flex: 1, marginLeft: 8 }}>
+            <Text style={s.label}>End Time <Text style={s.required}>*</Text></Text>
+            {Platform.OS === "web" ? (
+              <WebTimeInput
+                value={endTime ? formatTimeWeb(endTime) : ""}
+                onChange={(val) => {
+                  if (val) {
+                    const [hours, minutes] = val.split(":");
+                    const newTime = new Date();
+                    newTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                    if (!validateTime(newTime)) {
+                      crossAlert("Invalid Time", "You cannot select a past time for today.");
+                      return;
+                    }
+                    if (startTime && newTime <= startTime) {
+                      crossAlert("Invalid Time", "End time must be after start time.");
+                      return;
+                    }
+                    setEndTime(newTime);
+                  }
+                }}
+              />
+            ) : (
+              <>
+                <TouchableOpacity style={s.pickerBtn} onPress={() => setShowEndTimePicker(true)}>
+                  <Ionicons name="time-outline" size={20} color="#135E4B" />
+                  <Text style={[s.pickerText, !endTime && s.placeholderText]}>
+                    {endTime ? formatTime(endTime) : "End"}
+                  </Text>
+                </TouchableOpacity>
+                {showEndTimePicker && DateTimePicker && (
+                  <DateTimePicker
+                    value={endTime || new Date()}
+                    mode="time"
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    onChange={onEndTimeChange}
+                  />
+                )}
+              </>
+            )}
+          </View>
+        </View>
 
         {/* Location */}
         <Text style={s.label}>Location / Address <Text style={s.required}>*</Text></Text>
@@ -239,6 +363,7 @@ export default BookingScreen;
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#CCDCDB" },
   scroll: { padding: 16, paddingBottom: 40 },
+  timeRow: { flexDirection: "row", justifyContent: "space-between" },
   // Service Info Card
   serviceCard: {
     backgroundColor: "#fff", borderRadius: 16, padding: 18,
