@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView,
-  ActivityIndicator, FlatList, Alert, Modal, Dimensions, RefreshControl,
+  ActivityIndicator, FlatList, Modal, Dimensions, RefreshControl,
 } from "react-native";
+import { crossAlert } from "../utils/alert";
 import { Ionicons } from "@expo/vector-icons";
 import {
   getAdminDashboard, getAdminServices, deleteAdminService,
@@ -104,7 +105,7 @@ const AdminDashboardScreen = ({ navigation }) => {
       else if (p === "payments") setPayments(await getAdminPayments());
       else if (p === "feedbacks") setReviews(await getAdminReviews());
     } catch (e) {
-      Alert.alert("Error", e.message);
+      crossAlert("Error", e.message);
     }
     setLoading(false);
   }, []);
@@ -114,14 +115,14 @@ const AdminDashboardScreen = ({ navigation }) => {
   const selectPage = (key) => { setPage(key); setSidebarOpen(false); };
 
   const handleLogout = () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+    crossAlert("Sign Out", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
       { text: "Sign Out", style: "destructive", onPress: () => { setToken(null); setUser(null); navigation.replace("Login"); } },
     ]);
   };
 
   const handleDeleteService = (id) => {
-    Alert.alert("Delete", "Delete this service?", [
+    crossAlert("Delete", "Delete this service?", [
       { text: "Cancel" },
       { text: "Delete", style: "destructive", onPress: async () => { await deleteAdminService(id); load("services"); } },
     ]);
@@ -129,20 +130,20 @@ const AdminDashboardScreen = ({ navigation }) => {
 
   const handleProviderAction = async (id, status) => {
     try { await updateProviderStatus(id, status); load("providers"); }
-    catch (e) { Alert.alert("Error", e.message); }
+    catch (e) { crossAlert("Error", e.message); }
   };
 
   const handleDeleteReview = (id) => {
-    Alert.alert("Delete", "Delete this review?", [
+    crossAlert("Delete", "Delete this review?", [
       { text: "Cancel" },
       { text: "Delete", style: "destructive", onPress: async () => { await deleteAdminReview(id); load("feedbacks"); } },
     ]);
   };
 
   const handleDeleteProvider = (id) => {
-    Alert.alert("Delete Provider", "This will remove the provider profile and revoke their provider role. Continue?", [
+    crossAlert("Delete Provider", "This will remove the provider profile and revoke their provider role. Continue?", [
       { text: "Cancel" },
-      { text: "Delete", style: "destructive", onPress: async () => { try { await deleteAdminProvider(id); load("providers"); } catch (e) { Alert.alert("Error", e.message); } } },
+      { text: "Delete", style: "destructive", onPress: async () => { try { await deleteAdminProvider(id); load("providers"); } catch (e) { crossAlert("Error", e.message); } } },
     ]);
   };
 

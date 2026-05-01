@@ -1,26 +1,27 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
-  FlatList, ActivityIndicator, Alert, Modal, TextInput, RefreshControl, ScrollView,
+  View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image,
+  FlatList, ActivityIndicator, Modal, TextInput, RefreshControl, ScrollView,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { crossAlert } from "../utils/alert";
 import { getMyServices, updateService, deleteService, createService } from "../services/serviceApi";
-
-const FIELDS = ["title", "description", "category", "price", "location"];
 
 const ProviderDashboardScreen = () => {
   const navigation = useNavigation();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState("add"); // "add" | "edit"
+  const [modalMode, setModalMode] = useState("add");
   const [editId, setEditId] = useState(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [price, setPrice] = useState("");
   const [location, setLocation] = useState("");
+  const [imageUri, setImageUri] = useState("");
 
   const fetchMyServices = useCallback(async () => {
     setLoading(true);
@@ -28,7 +29,7 @@ const ProviderDashboardScreen = () => {
       const data = await getMyServices();
       setServices(data);
     } catch (e) {
-      Alert.alert("Error", e.message);
+      crossAlert("Error", e.message);
     }
     setLoading(false);
   }, []);
@@ -36,7 +37,7 @@ const ProviderDashboardScreen = () => {
   useEffect(() => { fetchMyServices(); }, []);
 
   const resetForm = () => {
-    setTitle(""); setDescription(""); setCategory(""); setPrice(""); setLocation("");
+    setTitle(""); setDescription(""); setCategory(""); setPrice(""); setLocation(""); setImageUri("");
   };
 
   const openAdd = () => {
@@ -52,36 +53,56 @@ const ProviderDashboardScreen = () => {
     setCategory(item.category);
     setPrice(String(item.price));
     setLocation(item.location);
+    setImageUri(item.image || "");
     setModalMode("edit");
     setEditId(item._id);
     setModalVisible(true);
   };
 
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      return crossAlert("Permission Required", "Please allow access to your photo library to upload images.");
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.5,
+      base64: true,
+    });
+    if (!result.canceled && result.assets?.[0]) {
+      const asset = result.assets[0];
+      const base64Uri = `data:image/jpeg;base64,${asset.base64}`;
+      setImageUri(base64Uri);
+    }
+  };
+
   const handleSave = async () => {
     if (!title || !description || !category || !price || !location) {
-      return Alert.alert("Missing Fields", "Please fill in all fields before saving.");
+      return crossAlert("Missing Fields", "Please fill in all fields before saving.");
     }
     if (isNaN(Number(price)) || Number(price) <= 0) {
-      return Alert.alert("Invalid Price", "Please enter a valid price greater than 0.");
+      return crossAlert("Invalid Price", "Please enter a valid price greater than 0.");
     }
     try {
-      const payload = { title, description, category, price: Number(price), location, availability: true };
+      const payload = { title, description, category, price: Number(price), location, availability: true, image: imageUri };
       if (modalMode === "edit") {
         await updateService(editId, payload);
-        Alert.alert("Success", "Service updated successfully!");
+        crossAlert("Success", "Service updated successfully!");
       } else {
-        await createService({ ...payload, image: "" });
-        Alert.alert("Success", "Service created successfully!");
+        await createService(payload);
+        crossAlert("Success", "Service created successfully!");
       }
       setModalVisible(false);
       fetchMyServices();
     } catch (e) {
-      Alert.alert("Error", e.message);
+      crossAlert("Error", e.message);
     }
   };
 
   const handleDelete = (id, serviceTitle) => {
-    Alert.alert(
+    crossAlert(
       "Delete Service",
       `Are you sure you want to delete "${serviceTitle}"? This action cannot be undone.`,
       [
@@ -91,9 +112,9 @@ const ProviderDashboardScreen = () => {
           onPress: async () => {
             try {
               await deleteService(id);
-              Alert.alert("Deleted", "Service has been removed.");
+              crossAlert("Deleted", "Service has been removed.");
               fetchMyServices();
-            } catch (e) { Alert.alert("Error", e.message); }
+            } catch (e) { crossAlert("Error", e.message); }
           },
         },
       ]
@@ -101,7 +122,7 @@ const ProviderDashboardScreen = () => {
   };
 
   const handleSwitchToCustomer = () => {
-    Alert.alert(
+    crossAlert(
       "Switch Mode",
       "Are you sure you want to switch to Customer Mode?",
       [
@@ -113,22 +134,27 @@ const ProviderDashboardScreen = () => {
 
   const renderService = ({ item }) => (
     <View style={st.serviceCard}>
-      <View style={{ flex: 1 }}>
-        <Text style={st.serviceTitle}>{item.title}</Text>
-        <Text style={st.serviceSub}>{item.category} · LKR {item.price}</Text>
-        <Text style={st.serviceSub}>{item.location}</Text>
-        <Text style={st.serviceDesc} numberOfLines={2}>{item.description}</Text>
-        <View style={[st.badge, item.availability ? st.badgeGreen : st.badgeRed]}>
-          <Text style={st.badgeText}>{item.availability ? "AVAILABLE" : "UNAVAILABLE"}</Text>
+      {item.image ? (
+        <Image source={{ uri: item.image }} style={st.serviceImg} />
+      ) : null}
+      <View style={st.serviceBody}>
+        <View style={{ flex: 1 }}>
+          <Text style={st.serviceTitle}>{item.title}</Text>
+          <Text style={st.serviceSub}>{item.category} · LKR {item.price}</Text>
+          <Text style={st.serviceSub}>{item.location}</Text>
+          <Text style={st.serviceDesc} numberOfLines={2}>{item.description}</Text>
+          <View style={[st.badge, item.availability ? st.badgeGreen : st.badgeRed]}>
+            <Text style={st.badgeText}>{item.availability ? "AVAILABLE" : "UNAVAILABLE"}</Text>
+          </View>
         </View>
-      </View>
-      <View style={st.serviceActions}>
-        <TouchableOpacity style={st.editBtn} onPress={() => openEdit(item)}>
-          <Ionicons name="create-outline" size={20} color="#3B82F6" />
-        </TouchableOpacity>
-        <TouchableOpacity style={st.deleteBtn} onPress={() => handleDelete(item._id, item.title)}>
-          <Ionicons name="trash-outline" size={20} color="#EF4444" />
-        </TouchableOpacity>
+        <View style={st.serviceActions}>
+          <TouchableOpacity style={st.editBtn} onPress={() => openEdit(item)}>
+            <Ionicons name="create-outline" size={20} color="#3B82F6" />
+          </TouchableOpacity>
+          <TouchableOpacity style={st.deleteBtn} onPress={() => handleDelete(item._id, item.title)}>
+            <Ionicons name="trash-outline" size={20} color="#EF4444" />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -186,12 +212,25 @@ const ProviderDashboardScreen = () => {
         />
       )}
 
-      {/* Add/Edit Modal — individual state fields so typing doesn't remount */}
+      {/* Add/Edit Modal */}
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
         <View style={st.modalOverlay}>
           <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}>
             <View style={st.modalCard}>
               <Text style={st.modalTitle}>{modalMode === "edit" ? "Edit Service" : "Add New Service"}</Text>
+
+              {/* Image Picker */}
+              <Text style={st.fieldLabel}>Service Image</Text>
+              <TouchableOpacity style={st.imagePickerBtn} onPress={pickImage}>
+                {imageUri ? (
+                  <Image source={{ uri: imageUri }} style={st.imagePreview} />
+                ) : (
+                  <View style={st.imagePickerPlaceholder}>
+                    <Ionicons name="camera-outline" size={32} color="#999" />
+                    <Text style={st.imagePickerText}>Tap to upload image</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
 
               <Text style={st.fieldLabel}>Title</Text>
               <TextInput style={st.modalInput} placeholder="Service title" placeholderTextColor="#999" value={title} onChangeText={setTitle} />
@@ -258,10 +297,11 @@ const st = StyleSheet.create({
   },
   addBtnText: { color: "#fff", fontWeight: "bold", fontSize: 13, marginLeft: 6 },
   serviceCard: {
-    backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10,
-    flexDirection: "row", alignItems: "flex-start",
+    backgroundColor: "#fff", borderRadius: 14, marginBottom: 10, overflow: "hidden",
     elevation: 1, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 3, shadowOffset: { width: 0, height: 1 },
   },
+  serviceImg: { width: "100%", height: 140, resizeMode: "cover" },
+  serviceBody: { padding: 16, flexDirection: "row", alignItems: "flex-start" },
   serviceTitle: { fontSize: 16, fontWeight: "bold", color: "#135E4B" },
   serviceSub: { fontSize: 13, color: "#666", marginTop: 2 },
   serviceDesc: { fontSize: 12, color: "#999", marginTop: 4 },
@@ -284,6 +324,15 @@ const st = StyleSheet.create({
     backgroundColor: "#F0F7F4", borderRadius: 10, padding: 12, marginBottom: 12,
     color: "#000", borderWidth: 1, borderColor: "#E0E0E0", fontSize: 15,
   },
+  // Image picker
+  imagePickerBtn: { marginBottom: 14, borderRadius: 12, overflow: "hidden" },
+  imagePreview: { width: "100%", height: 140, borderRadius: 12 },
+  imagePickerPlaceholder: {
+    width: "100%", height: 120, borderRadius: 12, borderWidth: 2, borderStyle: "dashed",
+    borderColor: "#ccc", backgroundColor: "#F0F7F4",
+    alignItems: "center", justifyContent: "center",
+  },
+  imagePickerText: { fontSize: 13, color: "#999", marginTop: 6 },
   modalBtns: { flexDirection: "row", justifyContent: "flex-end", marginTop: 10, gap: 10 },
   cancelBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, backgroundColor: "#F3F4F6" },
   cancelBtnText: { color: "#666", fontWeight: "600" },
