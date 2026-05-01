@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import {
   View, Text, StyleSheet, FlatList, SafeAreaView, TextInput,
-  TouchableOpacity, ActivityIndicator, Alert, Modal, Dimensions,
+  TouchableOpacity, ActivityIndicator, Modal, Dimensions,
 } from "react-native";
+import { crossAlert } from "../utils/alert";
 import { useNavigation } from "@react-navigation/native";
 import ServiceCard from "../components/ServiceCard";
 import { getAllServices } from "../services/serviceApi";
@@ -52,7 +53,7 @@ const ServicesListScreen = () => {
   const handleSwitchProvider = () => {
     setSidebarOpen(false);
     setTimeout(() => {
-      Alert.alert(
+      crossAlert(
         "Switch Mode",
         "Are you sure you want to switch to Provider Mode?",
         [
@@ -66,7 +67,7 @@ const ServicesListScreen = () => {
   const handleSignOut = () => {
     setSidebarOpen(false);
     setTimeout(() => {
-      Alert.alert(
+      crossAlert(
         "Sign Out",
         "Are you sure you want to sign out?",
         [
@@ -87,7 +88,7 @@ const ServicesListScreen = () => {
   const handleMyProfile = () => {
     setSidebarOpen(false);
     setTimeout(() => {
-      Alert.alert(
+      crossAlert(
         "My Profile",
         `Name: ${user?.firstName || ""} ${user?.lastName || ""}\nEmail: ${user?.email || ""}\nRoles: ${(user?.roles || []).join(", ")}\nProvider Status: ${user?.providerStatus || "none"}`,
         [{ text: "OK" }]
