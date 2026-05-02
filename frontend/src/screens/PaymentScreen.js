@@ -221,7 +221,6 @@ const PaymentScreen = () => {
             </>
           )}
         </TouchableOpacity>
-        </TouchableOpacity>
       </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

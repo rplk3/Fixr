@@ -16,6 +16,7 @@ const MyBookingsScreen = () => {
 
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
   const [feedbackServiceId, setFeedbackServiceId] = useState(null);
+  const [feedbackBookingId, setFeedbackBookingId] = useState(null);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
@@ -38,8 +39,9 @@ const MyBookingsScreen = () => {
     return unsubscribe;
   }, [navigation, fetchBookings]);
 
-  const openFeedbackModal = (serviceId) => {
+  const openFeedbackModal = (serviceId, bookingId) => {
     setFeedbackServiceId(serviceId);
+    setFeedbackBookingId(bookingId);
     setRating(0);
     setComment("");
     setFeedbackModalVisible(true);
@@ -60,11 +62,13 @@ const MyBookingsScreen = () => {
     try {
       await createReview({
         serviceId: feedbackServiceId,
+        bookingId: feedbackBookingId,
         rating,
         comment
       });
       crossAlert("Success", "Thank you for your feedback!");
       setFeedbackModalVisible(false);
+      fetchBookings(); // Refresh bookings to update hasReviewed status
     } catch (e) {
       crossAlert("Error", e.message);
     }
@@ -114,11 +118,14 @@ const MyBookingsScreen = () => {
 
         {item.status === "completed" && (
           <TouchableOpacity
-            style={s.feedbackBtn}
-            onPress={() => openFeedbackModal(item.service?._id)}
+            style={[s.feedbackBtn, item.hasReviewed && s.feedbackBtnDisabled]}
+            onPress={() => !item.hasReviewed && openFeedbackModal(item.service?._id, item._id)}
+            disabled={item.hasReviewed}
           >
-            <Ionicons name="star-outline" size={20} color="#135E4B" />
-            <Text style={s.feedbackBtnText}>Give Feedback</Text>
+            <Ionicons name="star-outline" size={20} color={item.hasReviewed ? "#9CA3AF" : "#135E4B"} />
+            <Text style={[s.feedbackBtnText, item.hasReviewed && s.feedbackBtnTextDisabled]}>
+              {item.hasReviewed ? "Feedback Given" : "Give Feedback"}
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -234,7 +241,11 @@ const s = StyleSheet.create({
     backgroundColor: "#E0ECEB", padding: 12, borderRadius: 8, marginTop: 12,
     flexDirection: "row", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#135E4B"
   },
+  feedbackBtnDisabled: {
+    backgroundColor: "#F3F4F6", borderColor: "#D1D5DB"
+  },
   feedbackBtnText: { color: "#135E4B", fontWeight: "bold", fontSize: 15, marginLeft: 8 },
+  feedbackBtnTextDisabled: { color: "#9CA3AF" },
   empty: { flex: 1, justifyContent: "center", alignItems: "center" },
   emptyText: { fontSize: 16, color: "#999", marginTop: 12 },
   

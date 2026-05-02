@@ -1,5 +1,5 @@
 const express = require("express");
-const { protect } = require("../middleware/authMiddleware");
+const protect = require("../middleware/authMiddleware");
 const { createReview, getServiceReviews } = require("../controllers/reviewController");
 
 const router = express.Router();

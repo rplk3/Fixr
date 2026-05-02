@@ -3,10 +3,10 @@ const Booking = require("../models/Booking");
 
 exports.createReview = async (req, res) => {
   try {
-    const { serviceId, rating, comment } = req.body;
+    const { serviceId, bookingId, rating, comment } = req.body;
 
-    if (!serviceId || !rating || !comment) {
-      return res.status(400).json({ message: "Service, rating, and comment are required" });
+    if (!serviceId || !bookingId || !rating || !comment) {
+      return res.status(400).json({ message: "Service, booking, rating, and comment are required" });
     }
 
     if (comment.trim().split(/\s+/).length > 50) {
@@ -19,6 +19,10 @@ exports.createReview = async (req, res) => {
       rating: Number(rating),
       comment: comment.trim(),
     });
+
+    if (bookingId) {
+      await Booking.findByIdAndUpdate(bookingId, { hasReviewed: true });
+    }
 
     res.status(201).json({ message: "Review submitted successfully", review });
   } catch (error) {

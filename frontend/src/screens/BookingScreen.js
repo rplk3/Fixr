@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TextInput, TouchableOpacity, Platform, Modal, FlatList
+  TextInput, TouchableOpacity, Platform, Modal, FlatList, KeyboardAvoidingView
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -193,7 +193,11 @@ const BookingScreen = () => {
 
   return (
     <SafeAreaView style={s.container}>
-      <ScrollView contentContainerStyle={s.scroll}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView contentContainerStyle={s.scroll}>
         {/* Service Info Card */}
         <View style={s.serviceCard}>
           <View style={s.serviceIconWrap}>
@@ -395,6 +399,7 @@ const BookingScreen = () => {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Reviews Modal */}
       <Modal visible={reviewsModalVisible} transparent animationType="slide" onRequestClose={() => setReviewsModalVisible(false)}>

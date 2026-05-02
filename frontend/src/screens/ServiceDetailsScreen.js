@@ -1,5 +1,5 @@
 import { useRoute, useNavigation } from "@react-navigation/native";
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,13 +7,56 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  FlatList,
+  ActivityIndicator
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { getServiceReviews } from "../services/reviewApi";
 
 const ServiceDetailsScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { service } = route.params;
+
+  const [reviews, setReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(true);
+  const [showReviews, setShowReviews] = useState(false);
+
+  React.useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const data = await getServiceReviews(service._id);
+        setReviews(data);
+      } catch (error) {
+        console.log("Failed to fetch reviews", error);
+      } finally {
+        setLoadingReviews(false);
+      }
+    };
+    fetchReviews();
+  }, [service._id]);
+
+  const averageRating = reviews.length > 0 
+    ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
+    : 0;
+
+  const renderReviewItem = ({ item }) => (
+    <View style={styles.reviewCard}>
+      <View style={styles.reviewHeader}>
+        <View style={styles.reviewAuthorRow}>
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarInitial}>{item.customer?.firstName?.[0] || "U"}</Text>
+          </View>
+          <Text style={styles.reviewerName}>{item.customer?.firstName} {item.customer?.lastName}</Text>
+        </View>
+        <View style={styles.starRow}>
+          <Ionicons name="star" size={14} color="#F59E0B" />
+          <Text style={styles.starText}>{item.rating}</Text>
+        </View>
+      </View>
+      <Text style={styles.reviewComment}>{item.comment}</Text>
+    </View>
+  );
 
   return (
     <ScrollView style={styles.container}>
@@ -48,7 +91,36 @@ const ServiceDetailsScreen = () => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Ratings</Text>
-          <Text style={styles.rating}>⭐ 4.5 (120 reviews)</Text>
+          <View style={styles.ratingRow}>
+            {loadingReviews ? (
+              <ActivityIndicator size="small" color="#135E4B" />
+            ) : reviews.length > 0 ? (
+              <Text style={styles.rating}>⭐ {averageRating} ({reviews.length} reviews)</Text>
+            ) : (
+              <Text style={styles.rating}>No reviews yet</Text>
+            )}
+
+            {reviews.length > 0 && (
+              <TouchableOpacity 
+                style={styles.toggleReviewsBtn} 
+                onPress={() => setShowReviews(!showReviews)}
+              >
+                <Text style={styles.toggleReviewsText}>
+                  {showReviews ? "Close ratings" : "View ratings"}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {showReviews && (
+            <View style={styles.reviewsListContainer}>
+              {reviews.map((r) => (
+                <React.Fragment key={r._id}>
+                  {renderReviewItem({ item: r })}
+                </React.Fragment>
+              ))}
+            </View>
+          )}
         </View>
 
         <TouchableOpacity
@@ -137,4 +209,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
+  ratingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  toggleReviewsBtn: {
+    backgroundColor: "#E0ECEB",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  toggleReviewsText: {
+    color: "#135E4B",
+    fontWeight: "bold",
+    fontSize: 13,
+  },
+  reviewsListContainer: {
+    marginTop: 12,
+  },
+  reviewCard: { 
+    backgroundColor: "#F9FAFB", borderRadius: 12, padding: 12, marginBottom: 8,
+    borderWidth: 1, borderColor: "#E5E7EB"
+  },
+  reviewHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  reviewAuthorRow: { flexDirection: "row", alignItems: "center" },
+  avatarCircle: { width: 30, height: 30, borderRadius: 15, backgroundColor: "#D1FAE5", justifyContent: "center", alignItems: "center", marginRight: 8 },
+  avatarInitial: { fontSize: 14, fontWeight: "bold", color: "#135E4B" },
+  reviewerName: { fontSize: 14, fontWeight: "600", color: "#111827" },
+  starRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#FEF3C7", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
+  starText: { fontSize: 12, fontWeight: "bold", color: "#B45309", marginLeft: 4 },
+  reviewComment: { fontSize: 13, color: "#4B5563", lineHeight: 18 },
 });
