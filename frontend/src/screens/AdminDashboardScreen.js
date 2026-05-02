@@ -19,8 +19,8 @@ const SIDEBAR_W = width * 0.7;
 
 const MENU = [
   { key: "dashboard", label: "Dashboard", icon: "grid-outline" },
+  { key: "dashboard", label: "Dashboard", icon: "grid-outline" },
   { key: "services", label: "Services", icon: "construct-outline" },
-  { key: "categories", label: "Categories", icon: "list-outline" },
   { key: "bookings", label: "Bookings", icon: "calendar-outline" },
   { key: "providers", label: "Providers", icon: "people-outline" },
   { key: "payments", label: "Payments", icon: "card-outline" },
@@ -31,7 +31,6 @@ const MENU = [
 const SUBTITLES = {
   dashboard: "Overview",
   services: "Service Management",
-  categories: "Category Management",
   bookings: "Appointments",
   providers: "Worker Profiles",
   payments: "Financial Records",
@@ -90,6 +89,7 @@ const ListPage = ({ data, loading, onRefresh, renderItem, emptyMsg }) => {
 // ─── Main Screen ───
 const AdminDashboardScreen = ({ navigation }) => {
   const [page, setPage] = useState("dashboard");
+  const [serviceTab, setServiceTab] = useState("services"); // "services" or "categories"
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({});
@@ -109,8 +109,10 @@ const AdminDashboardScreen = ({ navigation }) => {
     setLoading(true);
     try {
       if (p === "dashboard") setStats(await getAdminDashboard());
-      else if (p === "services") setServices(await getAdminServices());
-      else if (p === "categories") setCategories(await getCategories());
+      else if (p === "services") {
+        setServices(await getAdminServices());
+        setCategories(await getCategories());
+      }
       else if (p === "bookings") setBookings(await getAdminBookings());
       else if (p === "providers") setProviders(await getAdminProviders());
       else if (p === "payments") setPayments(await getAdminPayments());
@@ -167,7 +169,8 @@ const AdminDashboardScreen = ({ navigation }) => {
         await createCategory(catName.trim());
       }
       setCatModalOpen(false);
-      load("categories");
+      const catData = await getCategories();
+      setCategories(catData);
     } catch (e) {
       crossAlert("Error", e.message);
     }
@@ -176,7 +179,7 @@ const AdminDashboardScreen = ({ navigation }) => {
   const handleDeleteCategory = (id) => {
     crossAlert("Delete", "Delete this category?", [
       { text: "Cancel" },
-      { text: "Delete", style: "destructive", onPress: async () => { try { await deleteCategory(id); load("categories"); } catch (e) { crossAlert("Error", e.message); } } },
+      { text: "Delete", style: "destructive", onPress: async () => { try { await deleteCategory(id); const catData = await getCategories(); setCategories(catData); } catch (e) { crossAlert("Error", e.message); } } },
     ]);
   };
 
@@ -187,46 +190,57 @@ const AdminDashboardScreen = ({ navigation }) => {
         return <DashboardPage stats={stats} loading={loading} onRefresh={() => load("dashboard")} />;
       case "services":
         return (
-          <ListPage data={services} loading={loading} onRefresh={() => load("services")} emptyMsg="No services yet"
-            renderItem={({ item }) => (
-              <View style={s.listItem}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.listTitle}>{item.title}</Text>
-                  <Text style={s.listSub}>{item.category} · LKR {item.price}</Text>
-                  <Text style={s.listSub}>{item.location}</Text>
-                </View>
-                <TouchableOpacity onPress={() => handleDeleteService(item._id)} style={s.delBtn}>
-                  <Ionicons name="trash-outline" size={20} color="#EF4444" />
+          <View style={{ flex: 1 }}>
+            <View style={s.tabRow}>
+              <TouchableOpacity onPress={() => setServiceTab("services")} style={[s.subTab, serviceTab === "services" && s.subTabActive]}>
+                <Text style={[s.subTabText, serviceTab === "services" && s.subTabTextActive]}>All Services</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setServiceTab("categories")} style={[s.subTab, serviceTab === "categories" && s.subTabActive]}>
+                <Text style={[s.subTabText, serviceTab === "categories" && s.subTabTextActive]}>Categories</Text>
+              </TouchableOpacity>
+            </View>
+
+            {serviceTab === "services" ? (
+              <ListPage data={services} loading={loading} onRefresh={() => load("services")} emptyMsg="No services yet"
+                renderItem={({ item }) => (
+                  <View style={s.listItem}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.listTitle}>{item.title}</Text>
+                      <Text style={s.listSub}>{item.category} · LKR {item.price}</Text>
+                      <Text style={s.listSub}>{item.location}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => handleDeleteService(item._id)} style={s.delBtn}>
+                      <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              />
+            ) : (
+              <View style={{ flex: 1 }}>
+                <TouchableOpacity 
+                  style={s.addCatBtn} 
+                  onPress={() => { setEditingCatId(null); setCatName(""); setCatModalOpen(true); }}
+                >
+                  <Ionicons name="add" size={20} color="#fff" />
+                  <Text style={s.addCatBtnText}>Add Category</Text>
                 </TouchableOpacity>
+                <ListPage data={categories} loading={loading} onRefresh={() => load("services")} emptyMsg="No categories yet"
+                  renderItem={({ item }) => (
+                    <View style={s.listItem}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.listTitle}>{item.name}</Text>
+                      </View>
+                      <TouchableOpacity onPress={() => { setEditingCatId(item._id); setCatName(item.name); setCatModalOpen(true); }} style={s.editBtn}>
+                        <Ionicons name="pencil-outline" size={20} color="#3B82F6" />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleDeleteCategory(item._id)} style={s.delBtn}>
+                        <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                />
               </View>
             )}
-          />
-        );
-      case "categories":
-        return (
-          <View style={{ flex: 1 }}>
-            <TouchableOpacity 
-              style={s.addCatBtn} 
-              onPress={() => { setEditingCatId(null); setCatName(""); setCatModalOpen(true); }}
-            >
-              <Ionicons name="add" size={20} color="#fff" />
-              <Text style={s.addCatBtnText}>Add Category</Text>
-            </TouchableOpacity>
-            <ListPage data={categories} loading={loading} onRefresh={() => load("categories")} emptyMsg="No categories yet"
-              renderItem={({ item }) => (
-                <View style={s.listItem}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.listTitle}>{item.name}</Text>
-                  </View>
-                  <TouchableOpacity onPress={() => { setEditingCatId(item._id); setCatName(item.name); setCatModalOpen(true); }} style={s.editBtn}>
-                    <Ionicons name="pencil-outline" size={20} color="#3B82F6" />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleDeleteCategory(item._id)} style={s.delBtn}>
-                    <Ionicons name="trash-outline" size={20} color="#EF4444" />
-                  </TouchableOpacity>
-                </View>
-              )}
-            />
           </View>
         );
       case "bookings":
@@ -346,7 +360,6 @@ const AdminDashboardScreen = ({ navigation }) => {
                 <Ionicons name={m.icon} size={20} color={page === m.key ? "#fff" : "#A8D5BA"} />
                 <Text style={[s.sidebarLabel, page === m.key && s.sidebarLabelActive]}>{m.label}</Text>
                 {m.key === "services" && <Text style={s.sidebarHint}>Service Management</Text>}
-                {m.key === "categories" && <Text style={s.sidebarHint}>Category Management</Text>}
                 {m.key === "bookings" && <Text style={s.sidebarHint}>Appointments</Text>}
                 {m.key === "providers" && <Text style={s.sidebarHint}>Worker Profiles</Text>}
                 {m.key === "payments" && <Text style={s.sidebarHint}>Financial Records</Text>}
@@ -426,6 +439,11 @@ const s = StyleSheet.create({
   sidebarLabel: { fontSize: 15, color: "#A8D5BA", marginLeft: 14, fontWeight: "600" },
   sidebarLabelActive: { color: "#fff" },
   sidebarHint: { width: "100%", fontSize: 11, color: "rgba(168,213,186,0.6)", marginLeft: 34, marginTop: 2 },
+  tabRow: { flexDirection: "row", backgroundColor: "#fff", paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: "#E0E0E0" },
+  subTab: { paddingVertical: 12, marginRight: 20, borderBottomWidth: 2, borderBottomColor: "transparent" },
+  subTabActive: { borderBottomColor: "#135E4B" },
+  subTabText: { fontSize: 14, color: "#666", fontWeight: "600" },
+  subTabTextActive: { color: "#135E4B" },
   addCatBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "#135E4B", alignSelf: "flex-end", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, margin: 16, marginBottom: 0 },
   addCatBtnText: { color: "#fff", fontWeight: "bold", marginLeft: 6 },
   editBtn: { padding: 8, marginRight: 4 },
