@@ -17,8 +17,8 @@ exports.createPayment = async (req, res) => {
       return res.status(403).json({ message: "Not authorized" });
     }
 
-    if (booking.status !== "confirmed") {
-      return res.status(400).json({ message: "Booking must be confirmed before payment" });
+    if (booking.status !== "pending_payment") {
+      return res.status(400).json({ message: "Booking must be pending payment before paying" });
     }
 
     const payment = await Payment.create({
@@ -31,8 +31,8 @@ exports.createPayment = async (req, res) => {
       status: "success",
     });
 
-    // Mark booking as completed after payment
-    booking.status = "completed";
+    // Mark booking as paid after payment
+    booking.status = "paid";
     await booking.save();
 
     res.status(201).json({ message: "Payment successful", payment });
