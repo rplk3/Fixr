@@ -18,8 +18,8 @@ const paymentSchema = new mongoose.Schema(
     cardLastFour: { type: String, required: true },
     status: {
       type: String,
-      enum: ["success", "failed", "refunded", "cancelled"],
-      default: "success",
+      enum: ["paid", "success", "failed", "refunded", "cancelled", "pending"],
+      default: "paid",
     },
     paidAt: { type: Date, default: Date.now },
     notes: { type: String, default: "" },

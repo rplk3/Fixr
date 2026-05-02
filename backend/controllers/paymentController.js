@@ -28,11 +28,12 @@ exports.createPayment = async (req, res) => {
       paymentMethod: paymentMethod || "card",
       cardHolderName,
       cardLastFour,
-      status: "success",
+      status: "paid",
     });
 
-    // Mark booking as paid after payment
+    // Mark booking as paid and sync paymentStatus
     booking.status = "paid";
+    booking.paymentStatus = "paid";
     await booking.save();
 
     res.status(201).json({ message: "Payment successful", payment });

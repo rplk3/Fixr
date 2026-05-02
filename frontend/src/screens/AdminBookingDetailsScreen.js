@@ -107,8 +107,15 @@ const AdminBookingDetailsScreen = ({ route, navigation }) => {
     }
   };
 
+  const getPaymentStatusColor = (ps) => {
+    if (ps === "paid") return "#10B981";
+    if (ps === "failed") return "#EF4444";
+    if (ps === "refunded") return "#8B5CF6";
+    return "#F59E0B"; // pending
+  };
+
   const statusColor = getStatusColor(booking.status);
-  const paymentColor = booking.paymentStatus === "success" ? "#10B981" : "#EF4444";
+  const paymentStatusColor = getPaymentStatusColor(booking.paymentStatus || "pending");
 
   return (
     <SafeAreaView style={styles.container}>
@@ -160,6 +167,12 @@ const AdminBookingDetailsScreen = ({ route, navigation }) => {
           <View style={styles.metaRow}>
             <Text style={styles.metaLabel}>Booking Date:</Text>
             <Text style={styles.metaValue}>{new Date(booking.createdAt).toLocaleString()}</Text>
+          </View>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaLabel}>Payment Status:</Text>
+            <Text style={[styles.metaValue, { color: paymentStatusColor, fontWeight: "700" }]}>
+              {(booking.paymentStatus || "pending").toUpperCase()}
+            </Text>
           </View>
         </View>
 

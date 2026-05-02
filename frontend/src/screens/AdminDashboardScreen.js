@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView,
   ActivityIndicator, FlatList, Modal, Dimensions, RefreshControl,
@@ -139,7 +140,11 @@ const AdminDashboardScreen = ({ navigation }) => {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(page); }, [page]);
+  useFocusEffect(
+    useCallback(() => {
+      load(page);
+    }, [page, load])
+  );
 
   const selectPage = (key) => { setPage(key); setSidebarOpen(false); };
 
@@ -293,7 +298,7 @@ const AdminDashboardScreen = ({ navigation }) => {
       case "bookings": {
         const filteredBookings = bookings.filter(b => {
           const bStatus = b.status || "pending";
-          const paymentStatus = (bStatus === "paid" || bStatus === "completed") ? "success" : "pending";
+          const paymentStatus = b.paymentStatus || ((bStatus === "paid" || bStatus === "completed") ? "paid" : "pending");
           const statusMatch = bookingStatusFilter === "all" || bStatus === bookingStatusFilter;
           const paymentMatch = bookingPaymentFilter === "all" || paymentStatus === bookingPaymentFilter;
           return statusMatch && paymentMatch;
@@ -324,7 +329,7 @@ const AdminDashboardScreen = ({ navigation }) => {
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>Payment Filter</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                  {["all", "pending", "success"].map(pStatus => (
+                  {["all", "pending", "paid", "failed", "refunded"].map(pStatus => (
                     <TouchableOpacity
                       key={pStatus}
                       style={[s.subTab, bookingPaymentFilter === pStatus && s.subTabActive, { paddingVertical: 6, paddingHorizontal: 12 }]}
@@ -342,7 +347,14 @@ const AdminDashboardScreen = ({ navigation }) => {
             <ListPage data={filteredBookings} loading={loading} onRefresh={() => load("bookings")} emptyMsg="No bookings found"
               renderItem={({ item }) => {
                 const bStatus = item.status || "pending";
-                const pStatus = (bStatus === "paid" || bStatus === "completed") ? "success" : "pending";
+                const pStatus = item.paymentStatus || ((bStatus === "paid" || bStatus === "completed") ? "paid" : "pending");
+                
+                const getPColor = (ps) => {
+                  if (ps === "paid") return s.badgeGreen;
+                  if (ps === "failed") return s.badgeRed;
+                  if (ps === "refunded") return { backgroundColor: "#8B5CF6" };
+                  return s.badgeYellow;
+                };
                 
                 return (
                   <TouchableOpacity 
@@ -376,7 +388,7 @@ const AdminDashboardScreen = ({ navigation }) => {
                         <View style={[s.badge, bStatus === "completed" ? s.badgeGreen : bStatus === "cancelled" ? s.badgeRed : s.badgeYellow, { marginRight: 8, marginTop: 0 }]}>
                           <Text style={s.badgeText}>{bStatus.replace("_", " ").toUpperCase()}</Text>
                         </View>
-                        <View style={[s.badge, pStatus === "success" ? s.badgeGreen : s.badgeRed, { marginTop: 0 }]}>
+                        <View style={[s.badge, getPColor(pStatus), { marginTop: 0 }]}>
                           <Text style={s.badgeText}>{pStatus.toUpperCase()} PAY</Text>
                         </View>
                       </View>
@@ -429,7 +441,8 @@ const AdminDashboardScreen = ({ navigation }) => {
           <ListPage data={payments} loading={loading} onRefresh={() => load("payments")} emptyMsg="No payment records"
             renderItem={({ item }) => {
               const cust = item.customer;
-              const statusColor = item.status === "success" ? "#10B981" : item.status === "failed" ? "#EF4444" : item.status === "refunded" ? "#3B82F6" : "#6B7280";
+              const ps = item.status;
+              const statusColor = ps === "paid" ? "#10B981" : ps === "failed" ? "#EF4444" : ps === "refunded" ? "#8B5CF6" : ps === "pending" ? "#F59E0B" : "#6B7280";
               return (
                 <TouchableOpacity
                   style={s.listItem}

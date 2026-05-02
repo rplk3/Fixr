@@ -8,10 +8,11 @@ import { crossAlert } from "../utils/alert";
 import { getAdminPaymentById, updateAdminPaymentStatus, deleteAdminPayment } from "../services/adminApi";
 
 const STATUS_COLORS = {
-  success: { bg: "#D1FAE5", text: "#065F46" },
+  paid: { bg: "#D1FAE5", text: "#065F46" },
   failed: { bg: "#FEE2E2", text: "#991B1B" },
-  refunded: { bg: "#DBEAFE", text: "#1E40AF" },
+  refunded: { bg: "#E0E7FF", text: "#4338CA" },
   cancelled: { bg: "#F3F4F6", text: "#374151" },
+  pending: { bg: "#FEF3C7", text: "#D97706" },
 };
 
 const AdminPaymentDetailsScreen = ({ route, navigation }) => {
@@ -130,7 +131,7 @@ const AdminPaymentDetailsScreen = ({ route, navigation }) => {
         {/* Status Banner */}
         <View style={[st.statusBanner, { backgroundColor: sc.bg }]}>
           <Ionicons
-            name={p.status === "success" ? "checkmark-circle" : p.status === "failed" ? "close-circle" : p.status === "refunded" ? "arrow-undo-circle" : "ban"}
+            name={p.status === "paid" ? "checkmark-circle" : p.status === "failed" ? "close-circle" : p.status === "refunded" ? "arrow-undo-circle" : p.status === "pending" ? "time-outline" : "ban"}
             size={28}
             color={sc.text}
           />
@@ -194,8 +195,8 @@ const AdminPaymentDetailsScreen = ({ route, navigation }) => {
             <ActivityIndicator size="large" color="#135E4B" style={{ marginVertical: 20 }} />
           ) : (
             <>
-              {p.status !== "success" && (
-                <TouchableOpacity style={[st.actionBtn, { backgroundColor: "#10B981" }]} onPress={() => handleStatusUpdate("success", "Mark as Paid")}>
+              {p.status !== "paid" && (
+                <TouchableOpacity style={[st.actionBtn, { backgroundColor: "#10B981" }]} onPress={() => handleStatusUpdate("paid", "Mark as Paid")}>
                   <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
                   <Text style={st.actionBtnText}>Mark as Paid</Text>
                 </TouchableOpacity>
@@ -207,7 +208,7 @@ const AdminPaymentDetailsScreen = ({ route, navigation }) => {
                 </TouchableOpacity>
               )}
               {p.status !== "refunded" && (
-                <TouchableOpacity style={[st.actionBtn, { backgroundColor: "#3B82F6" }]} onPress={() => handleStatusUpdate("refunded", "Mark as Refunded")}>
+                <TouchableOpacity style={[st.actionBtn, { backgroundColor: "#8B5CF6" }]} onPress={() => handleStatusUpdate("refunded", "Mark as Refunded")}>
                   <Ionicons name="arrow-undo-circle-outline" size={20} color="#fff" />
                   <Text style={st.actionBtnText}>Mark as Refunded</Text>
                 </TouchableOpacity>
@@ -215,7 +216,7 @@ const AdminPaymentDetailsScreen = ({ route, navigation }) => {
               {p.status !== "cancelled" && (
                 <TouchableOpacity style={[st.actionBtn, { backgroundColor: "#6B7280" }]} onPress={() => handleStatusUpdate("cancelled", "Cancel Payment")}>
                   <Ionicons name="ban-outline" size={20} color="#fff" />
-                  <Text style={st.actionBtnText}>Cancel Payment</Text>
+                  <Text style={st.actionBtnText}>Cancel</Text>
                 </TouchableOpacity>
               )}
               <View style={st.divider} />

@@ -24,7 +24,12 @@ const bookingSchema = new mongoose.Schema(
     phone: { type: String, default: "" },
     status: {
       type: String,
-      enum: ["pending", "pending_payment", "paid", "completed", "cancelled"],
+      enum: ["pending", "pending_payment", "paid", "completed", "cancelled", "failed", "refunded"],
+      default: "pending",
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "paid", "failed", "refunded"],
       default: "pending",
     },
     hasReviewed: {

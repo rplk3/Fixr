@@ -245,7 +245,7 @@ exports.getPaymentById = async (req, res) => {
 exports.updatePaymentStatus = async (req, res) => {
   try {
     const { status, notes } = req.body;
-    const validStatuses = ["success", "failed", "refunded", "cancelled"];
+    const validStatuses = ["paid", "success", "failed", "refunded", "cancelled", "pending"];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: `Invalid status. Use one of: ${validStatuses.join(", ")}` });
     }
@@ -253,19 +253,26 @@ exports.updatePaymentStatus = async (req, res) => {
     const payment = await Payment.findById(req.params.id);
     if (!payment) return res.status(404).json({ message: "Payment not found" });
 
-    payment.status = status;
+    payment.status = status === "success" ? "paid" : status;
     if (notes !== undefined) payment.notes = notes;
-    if (status === "success") payment.paidAt = new Date();
+    if (status === "paid" || status === "success") payment.paidAt = new Date();
     await payment.save();
 
-    // Also update booking payment-related status if needed
+    // Also update booking payment-related status
     if (payment.booking) {
       const Booking = require("../models/Booking");
       const booking = await Booking.findById(payment.booking);
       if (booking) {
-        if (status === "success") booking.status = "paid";
-        else if (status === "failed" || status === "cancelled") booking.status = "pending_payment";
-        else if (status === "refunded") booking.status = "cancelled";
+        if (status === "paid" || status === "success") {
+          booking.status = "paid";
+          booking.paymentStatus = "paid";
+        } else if (status === "failed") {
+          booking.paymentStatus = "failed";
+        } else if (status === "refunded") {
+          booking.paymentStatus = "refunded";
+        } else if (status === "pending") {
+          booking.paymentStatus = "pending";
+        }
         await booking.save();
       }
     }
