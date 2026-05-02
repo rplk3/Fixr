@@ -21,6 +21,7 @@ const SIDEBAR_W = width * 0.7;
 
 const MENU = [
   { key: "dashboard", label: "Dashboard", icon: "grid-outline" },
+  { key: "users", label: "Manage Users", icon: "people-outline" },
   { key: "services", label: "Services", icon: "construct-outline" },
   { key: "bookings", label: "Bookings", icon: "calendar-outline" },
   { key: "payments", label: "Payments", icon: "card-outline" },
@@ -30,6 +31,7 @@ const MENU = [
 
 const SUBTITLES = {
   dashboard: "Overview",
+  users: "User Administration",
   services: "Service Management",
   bookings: "Appointments",
   payments: "Financial Records",
@@ -60,17 +62,6 @@ const DashboardPage = ({ stats, loading, onRefresh, navigation }) => {
           <Text style={s.cardLabel}>{c.label}</Text>
         </View>
       ))}
-
-      <TouchableOpacity 
-        style={[s.manageUsersBtn, { width: "100%", marginTop: 10 }]}
-        onPress={() => navigation.navigate("AdminUsers")}
-      >
-        <Ionicons name="people-outline" size={24} color="#fff" style={{ marginRight: 10 }} />
-        <Text style={s.manageUsersText}>Manage Users</Text>
-      </TouchableOpacity>
-        <Ionicons name="people-outline" size={24} color="#fff" style={{ marginRight: 10 }} />
-        <Text style={s.manageUsersText}>Manage Users</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -157,7 +148,15 @@ const AdminDashboardScreen = ({ navigation }) => {
     }, [page, load])
   );
 
-  const selectPage = (key) => { setPage(key); setSidebarOpen(false); };
+  const selectPage = (key) => { 
+    if (key === "users") {
+      setSidebarOpen(false);
+      navigation.navigate("AdminUsers");
+      return;
+    }
+    setPage(key); 
+    setSidebarOpen(false); 
+  };
 
   const handleLogout = () => {
     crossAlert("Sign Out", "Are you sure you want to sign out?", [
@@ -570,6 +569,7 @@ const AdminDashboardScreen = ({ navigation }) => {
               <TouchableOpacity key={m.key} style={[s.sidebarItem, page === m.key && s.sidebarItemActive]} onPress={() => selectPage(m.key)}>
                 <Ionicons name={m.icon} size={20} color={page === m.key ? "#fff" : "#A8D5BA"} />
                 <Text style={[s.sidebarLabel, page === m.key && s.sidebarLabelActive]}>{m.label}</Text>
+                {m.key === "users" && <Text style={s.sidebarHint}>User Administration</Text>}
                 {m.key === "services" && <Text style={s.sidebarHint}>Service Management</Text>}
                 {m.key === "bookings" && <Text style={s.sidebarHint}>Appointments</Text>}
                 {m.key === "payments" && <Text style={s.sidebarHint}>Financial Records</Text>}
@@ -653,20 +653,7 @@ export default AdminDashboardScreen;
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F1F5F0" },
-  manageUsersBtn: {
-    backgroundColor: "#135E4B",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  manageUsersText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
+
   // Header
   header: { backgroundColor: "#135E4B", flexDirection: "row", alignItems: "center", paddingTop: 44, paddingBottom: 16, paddingHorizontal: 16 },
   menuBtn: { marginRight: 14 },

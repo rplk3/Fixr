@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from "react";
 import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity, FlatList,
-  ActivityIndicator, RefreshControl, Dimensions
+  ActivityIndicator, RefreshControl, Dimensions, ScrollView
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getAdminUsers } from "../services/adminApi";
