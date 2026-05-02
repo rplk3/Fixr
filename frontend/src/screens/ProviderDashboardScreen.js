@@ -199,7 +199,11 @@ const ProviderDashboardScreen = () => {
           <View style={st.bookingHeader}>
             <Text style={st.serviceTitle}>{item.service?.title || "Service"}</Text>
             <View style={[st.badge, st[`badge_${item.status}`]]}>
-              <Text style={st.badgeText}>{item.status.toUpperCase()}</Text>
+              <Text style={st.badgeText}>
+                {item.status === "paid" ? "PAYMENT RECEIVED" : 
+                 item.status === "pending_payment" ? "PENDING PAYMENT" : 
+                 item.status.toUpperCase()}
+              </Text>
             </View>
           </View>
           
@@ -240,10 +244,22 @@ const ProviderDashboardScreen = () => {
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[st.actionBtn, { backgroundColor: "#4CB572", flex: 1, marginLeft: 6 }]} 
-                onPress={() => handleBookingAction(item._id, "confirmed", "Accept")}
+                onPress={() => handleBookingAction(item._id, "pending_payment", "Accept")}
               >
                 <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
                 <Text style={st.actionBtnText}>Accept</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {item.status === "paid" && (
+            <View style={st.bookingActionRow}>
+              <TouchableOpacity 
+                style={[st.actionBtn, { backgroundColor: "#3B82F6", flex: 1 }]} 
+                onPress={() => handleBookingAction(item._id, "completed", "Mark as Completed")}
+              >
+                <Ionicons name="checkmark-done-circle-outline" size={18} color="#fff" />
+                <Text style={st.actionBtnText}>Mark Completed</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -456,6 +472,8 @@ const st = StyleSheet.create({
   badgeGreen: { backgroundColor: "#D1FAE5" },
   badgeRed: { backgroundColor: "#FEE2E2" },
   badge_pending: { backgroundColor: "#FEF3C7" },
+  badge_pending_payment: { backgroundColor: "#FEF3C7" },
+  badge_paid: { backgroundColor: "#D1FAE5" },
   badge_confirmed: { backgroundColor: "#D1FAE5" },
   badge_completed: { backgroundColor: "#DBEAFE" },
   badge_cancelled: { backgroundColor: "#FEE2E2" },

@@ -1,12 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TextInput, TouchableOpacity, Platform,
+  TextInput, TouchableOpacity, Platform, Modal, FlatList
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { crossAlert } from "../utils/alert";
 import { createBooking } from "../services/bookingApi";
+import { getServiceReviews } from "../services/reviewApi";
 import { getUser } from "../services/authApi";
 import { WebDateInput, WebTimeInput } from "../components/WebInputs";
 
@@ -37,9 +38,25 @@ const BookingScreen = () => {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Reviews State
+  const [reviews, setReviews] = useState([]);
+  const [reviewsModalVisible, setReviewsModalVisible] = useState(false);
+
   // Minimum date = today
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const data = await getServiceReviews(service._id);
+        setReviews(data);
+      } catch (e) {
+        console.log("Failed to fetch reviews", e);
+      }
+    };
+    fetchReviews();
+  }, [service._id]);
 
   // ── Date Picker Handler ──
   const onDateChange = (event, selectedDate) => {
@@ -155,6 +172,24 @@ const BookingScreen = () => {
     }
     setLoading(false);
   };
+
+  const renderReviewItem = ({ item }) => (
+    <View style={s.reviewCard}>
+      <View style={s.reviewHeader}>
+        <View style={s.reviewAuthorRow}>
+          <View style={s.avatarCircle}>
+            <Text style={s.avatarInitial}>{item.customer?.firstName?.[0] || "U"}</Text>
+          </View>
+          <Text style={s.reviewerName}>{item.customer?.firstName} {item.customer?.lastName}</Text>
+        </View>
+        <View style={s.starRow}>
+          <Ionicons name="star" size={14} color="#F59E0B" />
+          <Text style={s.starText}>{item.rating}</Text>
+        </View>
+      </View>
+      <Text style={s.reviewComment}>{item.comment}</Text>
+    </View>
+  );
 
   return (
     <SafeAreaView style={s.container}>
@@ -342,6 +377,12 @@ const BookingScreen = () => {
           <Text style={s.validationHint}>Phone must be 10 digits ({phone.length}/10)</Text>
         )}
 
+        {/* Reviews Button */}
+        <TouchableOpacity style={s.viewReviewsBtn} onPress={() => setReviewsModalVisible(true)}>
+          <Ionicons name="star" size={20} color="#F59E0B" />
+          <Text style={s.viewReviewsText}>View Reviews ({reviews.length})</Text>
+        </TouchableOpacity>
+
         {/* Confirm Button */}
         <TouchableOpacity
           style={[s.confirmBtn, loading && { opacity: 0.6 }]}
@@ -354,6 +395,34 @@ const BookingScreen = () => {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Reviews Modal */}
+      <Modal visible={reviewsModalVisible} transparent animationType="slide" onRequestClose={() => setReviewsModalVisible(false)}>
+        <View style={s.modalOverlay}>
+          <View style={s.modalContainer}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Service Reviews</Text>
+              <TouchableOpacity onPress={() => setReviewsModalVisible(false)}>
+                <Ionicons name="close" size={28} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            {reviews.length === 0 ? (
+              <View style={s.emptyReviews}>
+                <Ionicons name="chatbubbles-outline" size={48} color="#ccc" />
+                <Text style={s.emptyReviewsText}>No reviews yet for this service.</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={reviews}
+                keyExtractor={(item) => item._id}
+                renderItem={renderReviewItem}
+                contentContainerStyle={{ padding: 16 }}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -401,13 +470,39 @@ const s = StyleSheet.create({
   },
   pickerText: { fontSize: 15, color: "#000", marginLeft: 10 },
   placeholderText: { color: "#999" },
+  // View Reviews Button
+  viewReviewsBtn: {
+    backgroundColor: "#E0ECEB", borderRadius: 14, paddingVertical: 14,
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    marginTop: 8, borderWidth: 1, borderColor: "#135E4B"
+  },
+  viewReviewsText: {
+    color: "#135E4B", fontSize: 16, fontWeight: "bold", marginLeft: 8,
+  },
   // Confirm Button
   confirmBtn: {
     backgroundColor: "#4CB572", borderRadius: 14, paddingVertical: 16,
     flexDirection: "row", alignItems: "center", justifyContent: "center",
-    marginTop: 16, elevation: 2,
+    marginTop: 16, elevation: 2, marginBottom: 20,
   },
   confirmBtnText: {
     color: "#fff", fontSize: 17, fontWeight: "bold", marginLeft: 8,
   },
+  
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  modalContainer: { backgroundColor: "#F9FAFB", borderTopLeftRadius: 24, borderTopRightRadius: 24, height: "70%" },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20, borderBottomWidth: 1, borderBottomColor: "#E5E7EB", backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  modalTitle: { fontSize: 18, fontWeight: "bold", color: "#111827" },
+  emptyReviews: { flex: 1, justifyContent: "center", alignItems: "center", padding: 40 },
+  emptyReviewsText: { marginTop: 16, fontSize: 16, color: "#6B7280", textAlign: "center" },
+  reviewCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 12, elevation: 1, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 3, shadowOffset: { width: 0, height: 1 } },
+  reviewHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  reviewAuthorRow: { flexDirection: "row", alignItems: "center" },
+  avatarCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#E0ECEB", justifyContent: "center", alignItems: "center", marginRight: 10 },
+  avatarInitial: { fontSize: 16, fontWeight: "bold", color: "#135E4B" },
+  reviewerName: { fontSize: 15, fontWeight: "600", color: "#111827" },
+  starRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#FEF3C7", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  starText: { fontSize: 13, fontWeight: "bold", color: "#B45309", marginLeft: 4 },
+  reviewComment: { fontSize: 14, color: "#4B5563", lineHeight: 20 },
 });

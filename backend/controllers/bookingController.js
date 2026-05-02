@@ -58,7 +58,7 @@ exports.updateBookingStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!["confirmed", "cancelled", "completed"].includes(status)) {
+    if (!["pending_payment", "cancelled", "completed"].includes(status)) {
       return res.status(400).json({ message: "Invalid status" });
     }
 

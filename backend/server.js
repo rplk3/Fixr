@@ -27,6 +27,9 @@ app.use("/api/bookings", bookingRoutes);
 const paymentRoutes = require("./routes/paymentRoutes");
 app.use("/api/payments", paymentRoutes);
 
+const reviewRoutes = require("./routes/reviewRoutes");
+app.use("/api/reviews", reviewRoutes);
+
 app.get("/", (req, res) => {
   res.send("Fixr API Running 🚀");
 });
