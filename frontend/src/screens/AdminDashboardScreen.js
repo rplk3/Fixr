@@ -38,7 +38,7 @@ const SUBTITLES = {
 };
 
 // ─── Dashboard Cards ───
-const DashboardPage = ({ stats, loading, onRefresh }) => {
+const DashboardPage = ({ stats, loading, onRefresh, navigation }) => {
   const cards = [
     { label: "Total Users", value: stats.totalUsers, icon: "people", color: "#3B82F6" },
     { label: "Total Providers", value: stats.totalProviders, icon: "briefcase", color: "#8B5CF6" },
@@ -60,6 +60,17 @@ const DashboardPage = ({ stats, loading, onRefresh }) => {
           <Text style={s.cardLabel}>{c.label}</Text>
         </View>
       ))}
+
+      <TouchableOpacity 
+        style={[s.manageUsersBtn, { width: "100%", marginTop: 10 }]}
+        onPress={() => navigation.navigate("AdminUsers")}
+      >
+        <Ionicons name="people-outline" size={24} color="#fff" style={{ marginRight: 10 }} />
+        <Text style={s.manageUsersText}>Manage Users</Text>
+      </TouchableOpacity>
+        <Ionicons name="people-outline" size={24} color="#fff" style={{ marginRight: 10 }} />
+        <Text style={s.manageUsersText}>Manage Users</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -236,7 +247,7 @@ const AdminDashboardScreen = ({ navigation }) => {
   const renderContent = () => {
     switch (page) {
       case "dashboard":
-        return <DashboardPage stats={stats} loading={loading} onRefresh={() => load("dashboard")} />;
+        return <DashboardPage stats={stats} loading={loading} onRefresh={() => load("dashboard")} navigation={navigation} />;
       case "services":
         return (
           <View style={{ flex: 1 }}>
@@ -642,6 +653,20 @@ export default AdminDashboardScreen;
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F1F5F0" },
+  manageUsersBtn: {
+    backgroundColor: "#135E4B",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  manageUsersText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   // Header
   header: { backgroundColor: "#135E4B", flexDirection: "row", alignItems: "center", paddingTop: 44, paddingBottom: 16, paddingHorizontal: 16 },
   menuBtn: { marginRight: 14 },

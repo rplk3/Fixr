@@ -158,3 +158,42 @@ export const getAdminUsers = async () => {
   if (!res.ok) throw new Error(data.message || "Failed to fetch users");
   return data;
 };
+
+export const getAdminUserById = async (id) => {
+  const res = await fetch(`${BASE_URL}/admin/users/${id}`, { headers: authHeaders() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to fetch user");
+  return data;
+};
+
+export const createAdminUser = async (userData) => {
+  const res = await fetch(`${BASE_URL}/admin/users`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(userData),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to create user");
+  return data;
+};
+
+export const updateAdminUser = async (id, userData) => {
+  const res = await fetch(`${BASE_URL}/admin/users/${id}`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: JSON.stringify(userData),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to update user");
+  return data;
+};
+
+export const deleteAdminUser = async (id) => {
+  const res = await fetch(`${BASE_URL}/admin/users/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to delete user");
+  return data;
+};

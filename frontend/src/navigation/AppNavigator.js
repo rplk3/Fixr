@@ -101,6 +101,26 @@ const AppNavigator = () => {
           component={AdminBookingDetailsScreen}
           options={{ headerShown: false }}
         />
+        <Stack.Screen
+          name="AdminUsers"
+          component={require("../screens/AdminUsersScreen").default}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AdminUserDetails"
+          component={require("../screens/AdminUserDetailsScreen").default}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AdminCreateUser"
+          component={require("../screens/AdminCreateUserScreen").default}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AdminEditUser"
+          component={require("../screens/AdminEditUserScreen").default}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

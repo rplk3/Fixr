@@ -57,5 +57,9 @@ router.delete("/reviews/:id", deleteReview);
 
 // Users
 router.get("/users", getAllUsers);
+router.get("/users/:id", require("../controllers/adminController").getUserById);
+router.post("/users", require("../controllers/adminController").createUser);
+router.put("/users/:id", require("../controllers/adminController").updateUser);
+router.delete("/users/:id", require("../controllers/adminController").deleteUser);
 
 module.exports = router;
