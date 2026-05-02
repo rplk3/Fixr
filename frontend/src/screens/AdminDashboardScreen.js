@@ -6,10 +6,11 @@ import {
 import { crossAlert } from "../utils/alert";
 import { Ionicons } from "@expo/vector-icons";
 import {
-  getAdminDashboard, getAdminServices, deleteAdminService,
+  getAdminDashboard, getAdminServices, deleteAdminService, updateAdminService,
   getAdminBookings, getAdminProviders, updateProviderStatus, deleteAdminProvider,
   getAdminPayments, getAdminReviews, deleteAdminReview,
 } from "../services/adminApi";
+import { getAdminComplaints } from "../services/complaintApi";
 import { setToken, setUser } from "../services/authApi";
 import { getCategories, createCategory, updateCategory, deleteCategory } from "../services/categoryApi";
 import { TextInput } from "react-native";
@@ -21,7 +22,6 @@ const MENU = [
   { key: "dashboard", label: "Dashboard", icon: "grid-outline" },
   { key: "services", label: "Services", icon: "construct-outline" },
   { key: "bookings", label: "Bookings", icon: "calendar-outline" },
-  { key: "providers", label: "Providers", icon: "people-outline" },
   { key: "payments", label: "Payments", icon: "card-outline" },
   { key: "feedbacks", label: "Feedbacks", icon: "chatbubbles-outline" },
   { key: "media", label: "Media", icon: "images-outline" },
@@ -31,7 +31,6 @@ const SUBTITLES = {
   dashboard: "Overview",
   services: "Service Management",
   bookings: "Appointments",
-  providers: "Worker Profiles",
   payments: "Financial Records",
   feedbacks: "Reviews & Support",
   media: "Images",
@@ -98,11 +97,22 @@ const AdminDashboardScreen = ({ navigation }) => {
   const [providers, setProviders] = useState([]);
   const [payments, setPayments] = useState([]);
   const [reviews, setReviews] = useState([]);
+  const [complaints, setComplaints] = useState([]);
+  const [feedbackTab, setFeedbackTab] = useState("reviews"); // "reviews" or "complaints"
 
   // Category Modal
   const [catModalOpen, setCatModalOpen] = useState(false);
   const [editingCatId, setEditingCatId] = useState(null);
   const [catName, setCatName] = useState("");
+
+  // Service Edit Modal
+  const [svcEditOpen, setSvcEditOpen] = useState(false);
+  const [editSvc, setEditSvc] = useState(null);
+  const [svcTitle, setSvcTitle] = useState("");
+  const [svcDesc, setSvcDesc] = useState("");
+  const [svcCategory, setSvcCategory] = useState("");
+  const [svcPrice, setSvcPrice] = useState("");
+  const [svcLocation, setSvcLocation] = useState("");
 
   const load = useCallback(async (p) => {
     setLoading(true);
@@ -115,7 +125,10 @@ const AdminDashboardScreen = ({ navigation }) => {
       else if (p === "bookings") setBookings(await getAdminBookings());
       else if (p === "providers") setProviders(await getAdminProviders());
       else if (p === "payments") setPayments(await getAdminPayments());
-      else if (p === "feedbacks") setReviews(await getAdminReviews());
+      else if (p === "feedbacks") {
+        setReviews(await getAdminReviews());
+        setComplaints(await getAdminComplaints());
+      }
     } catch (e) {
       crossAlert("Error", e.message);
     }
@@ -138,6 +151,34 @@ const AdminDashboardScreen = ({ navigation }) => {
       { text: "Cancel" },
       { text: "Delete", style: "destructive", onPress: async () => { await deleteAdminService(id); load("services"); } },
     ]);
+  };
+
+  const openEditService = (item) => {
+    setEditSvc(item);
+    setSvcTitle(item.title || "");
+    setSvcDesc(item.description || "");
+    setSvcCategory(item.category || "");
+    setSvcPrice(String(item.price || ""));
+    setSvcLocation(item.location || "");
+    setSvcEditOpen(true);
+  };
+
+  const handleSaveService = async () => {
+    if (!svcTitle.trim() || !svcPrice.trim()) return crossAlert("Error", "Title and price are required");
+    try {
+      await updateAdminService(editSvc._id, {
+        title: svcTitle.trim(),
+        description: svcDesc.trim(),
+        category: svcCategory.trim(),
+        price: Number(svcPrice),
+        location: svcLocation.trim(),
+      });
+      setSvcEditOpen(false);
+      crossAlert("Success", "Service updated!");
+      load("services");
+    } catch (e) {
+      crossAlert("Error", e.message);
+    }
   };
 
   const handleProviderAction = async (id, status) => {
@@ -208,6 +249,9 @@ const AdminDashboardScreen = ({ navigation }) => {
                       <Text style={s.listSub}>{item.category} · LKR {item.price}</Text>
                       <Text style={s.listSub}>{item.location}</Text>
                     </View>
+                    <TouchableOpacity onPress={() => openEditService(item)} style={s.editBtn}>
+                      <Ionicons name="create-outline" size={20} color="#3B82F6" />
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={() => handleDeleteService(item._id)} style={s.delBtn}>
                       <Ionicons name="trash-outline" size={20} color="#EF4444" />
                     </TouchableOpacity>
@@ -290,29 +334,83 @@ const AdminDashboardScreen = ({ navigation }) => {
       case "payments":
         return (
           <ListPage data={payments} loading={loading} onRefresh={() => load("payments")} emptyMsg="No payment records"
-            renderItem={({ item }) => (
-              <View style={s.listItem}>
-                <Text style={s.listTitle}>Payment #{(item._id || "").slice(-6)}</Text>
-                <Text style={s.listSub}>LKR {item.amount || 0} · {item.status || "N/A"}</Text>
-              </View>
-            )}
+            renderItem={({ item }) => {
+              const cust = item.customer;
+              const statusColor = item.status === "success" ? "#10B981" : item.status === "failed" ? "#EF4444" : item.status === "refunded" ? "#3B82F6" : "#6B7280";
+              return (
+                <TouchableOpacity
+                  style={s.listItem}
+                  onPress={() => navigation.navigate("AdminPaymentDetails", { paymentId: item._id })}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.listTitle}>LKR {(item.amount || 0).toLocaleString()}</Text>
+                    <Text style={s.listSub}>
+                      {cust ? `${cust.firstName} ${cust.lastName}` : "Unknown"} · {item.paymentMethod || "card"}
+                    </Text>
+                    <Text style={s.listSub}>****{item.cardLastFour || "----"} · {new Date(item.createdAt).toLocaleDateString()}</Text>
+                    <View style={[s.badge, { backgroundColor: statusColor + "20" }]}>
+                      <Text style={[s.badgeText, { color: statusColor }]}>{(item.status || "N/A").toUpperCase()}</Text>
+                    </View>
+                  </View>
+                  <View style={{ alignItems: "center" }}>
+                    <Ionicons name="chevron-forward" size={20} color="#999" />
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
           />
         );
       case "feedbacks":
         return (
-          <ListPage data={reviews} loading={loading} onRefresh={() => load("feedbacks")} emptyMsg="No reviews yet"
-            renderItem={({ item }) => (
-              <View style={s.listItem}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.listTitle}>Rating: {"⭐".repeat(item.rating || 0)}</Text>
-                  <Text style={s.listSub}>{item.comment || "No comment"}</Text>
-                </View>
-                <TouchableOpacity onPress={() => handleDeleteReview(item._id)} style={s.delBtn}>
-                  <Ionicons name="trash-outline" size={20} color="#EF4444" />
-                </TouchableOpacity>
-              </View>
+          <View style={{ flex: 1 }}>
+            <View style={s.tabRow}>
+              <TouchableOpacity onPress={() => setFeedbackTab("reviews")} style={[s.subTab, feedbackTab === "reviews" && s.subTabActive]}>
+                <Text style={[s.subTabText, feedbackTab === "reviews" && s.subTabTextActive]}>Reviews</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setFeedbackTab("complaints")} style={[s.subTab, feedbackTab === "complaints" && s.subTabActive]}>
+                <Text style={[s.subTabText, feedbackTab === "complaints" && s.subTabTextActive]}>Complaints</Text>
+              </TouchableOpacity>
+            </View>
+
+            {feedbackTab === "reviews" ? (
+              <ListPage data={reviews} loading={loading} onRefresh={() => load("feedbacks")} emptyMsg="No reviews yet"
+                renderItem={({ item }) => (
+                  <View style={s.listItem}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.listTitle}>Rating: {"⭐".repeat(item.rating || 0)}</Text>
+                      <Text style={s.listSub}>{item.comment || "No comment"}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => handleDeleteReview(item._id)} style={s.delBtn}>
+                      <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              />
+            ) : (
+              <ListPage data={complaints} loading={loading} onRefresh={() => load("feedbacks")} emptyMsg="No complaints yet"
+                renderItem={({ item }) => {
+                  const statusColor = item.status === "resolved" ? "#10B981" : "#F59E0B";
+                  return (
+                    <TouchableOpacity
+                      style={s.listItem}
+                      onPress={() => navigation.navigate("AdminComplaintDetails", { complaintId: item._id })}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.listTitle}>{item.title}</Text>
+                        <Text style={s.listSub}>{item.user?.firstName} {item.user?.lastName} · {item.category}</Text>
+                        <View style={[s.badge, { backgroundColor: statusColor + "20" }]}>
+                          <Text style={[s.badgeText, { color: statusColor }]}>{(item.status || "N/A").toUpperCase()}</Text>
+                        </View>
+                      </View>
+                      <View style={{ alignItems: "center" }}>
+                        <Ionicons name="chevron-forward" size={20} color="#999" />
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
             )}
-          />
+          </View>
         );
       case "media":
         return (
@@ -333,13 +431,10 @@ const AdminDashboardScreen = ({ navigation }) => {
         <TouchableOpacity onPress={() => setSidebarOpen(true)} style={s.menuBtn}>
           <Ionicons name="menu" size={26} color="#fff" />
         </TouchableOpacity>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={s.headerTitle}>{MENU.find((m) => m.key === page)?.label}</Text>
           <Text style={s.headerSub}>{SUBTITLES[page]}</Text>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={s.logoutBtn}>
-          <Ionicons name="log-out-outline" size={22} color="#fff" />
-        </TouchableOpacity>
       </View>
 
       {/* Content */}
@@ -360,12 +455,18 @@ const AdminDashboardScreen = ({ navigation }) => {
                 <Text style={[s.sidebarLabel, page === m.key && s.sidebarLabelActive]}>{m.label}</Text>
                 {m.key === "services" && <Text style={s.sidebarHint}>Service Management</Text>}
                 {m.key === "bookings" && <Text style={s.sidebarHint}>Appointments</Text>}
-                {m.key === "providers" && <Text style={s.sidebarHint}>Worker Profiles</Text>}
                 {m.key === "payments" && <Text style={s.sidebarHint}>Financial Records</Text>}
                 {m.key === "feedbacks" && <Text style={s.sidebarHint}>Reviews & Support</Text>}
                 {m.key === "media" && <Text style={s.sidebarHint}>Images</Text>}
               </TouchableOpacity>
             ))}
+
+            <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.15)", marginVertical: 16, marginHorizontal: 10 }} />
+
+            <TouchableOpacity style={s.sidebarItem} onPress={() => { setSidebarOpen(false); setTimeout(handleLogout, 400); }}>
+              <Ionicons name="log-out-outline" size={20} color="#FF6B6B" />
+              <Text style={[s.sidebarLabel, { color: "#FF6B6B" }]}>Sign Out</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -390,6 +491,41 @@ const AdminDashboardScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
           </View>
+        </View>
+      </Modal>
+
+      {/* Service Edit Modal */}
+      <Modal visible={svcEditOpen} transparent animationType="fade" onRequestClose={() => setSvcEditOpen(false)}>
+        <View style={s.modalOverlay}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}>
+            <View style={s.modalBox}>
+              <Text style={s.modalTitle}>Edit Service</Text>
+
+              <Text style={s.fieldLabel}>Title</Text>
+              <TextInput style={s.modalInput} placeholder="Service title" value={svcTitle} onChangeText={setSvcTitle} />
+
+              <Text style={s.fieldLabel}>Description</Text>
+              <TextInput style={[s.modalInput, { minHeight: 70, textAlignVertical: "top" }]} placeholder="Description" value={svcDesc} onChangeText={setSvcDesc} multiline />
+
+              <Text style={s.fieldLabel}>Category</Text>
+              <TextInput style={s.modalInput} placeholder="Category" value={svcCategory} onChangeText={setSvcCategory} />
+
+              <Text style={s.fieldLabel}>Price (LKR)</Text>
+              <TextInput style={s.modalInput} placeholder="0" value={svcPrice} onChangeText={setSvcPrice} keyboardType="numeric" />
+
+              <Text style={s.fieldLabel}>Location</Text>
+              <TextInput style={s.modalInput} placeholder="City or area" value={svcLocation} onChangeText={setSvcLocation} />
+
+              <View style={s.modalActions}>
+                <TouchableOpacity onPress={() => setSvcEditOpen(false)} style={[s.modalBtn, { backgroundColor: "#ccc" }]}>
+                  <Text style={s.modalBtnText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleSaveService} style={[s.modalBtn, { backgroundColor: "#135E4B" }]}>
+                  <Text style={s.modalBtnText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
         </View>
       </Modal>
     </SafeAreaView>
@@ -449,7 +585,8 @@ const s = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 20 },
   modalBox: { backgroundColor: "#fff", width: "100%", borderRadius: 12, padding: 20 },
   modalTitle: { fontSize: 18, fontWeight: "bold", color: "#135E4B", marginBottom: 16 },
-  modalInput: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 20 },
+  fieldLabel: { fontSize: 13, fontWeight: "600", color: "#135E4B", marginBottom: 4 },
+  modalInput: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 12 },
   modalActions: { flexDirection: "row", justifyContent: "flex-end" },
   modalBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, marginLeft: 10 },
   modalBtnText: { color: "#fff", fontWeight: "bold" },

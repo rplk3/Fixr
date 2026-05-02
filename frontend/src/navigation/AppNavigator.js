@@ -14,6 +14,9 @@ import BookingScreen from "../screens/BookingScreen";
 import MyBookingsScreen from "../screens/MyBookingsScreen";
 import PaymentScreen from "../screens/PaymentScreen";
 import MyProfileScreen from "../screens/MyProfileScreen";
+import AdminPaymentDetailsScreen from "../screens/AdminPaymentDetailsScreen";
+import ComplaintsScreen from "../screens/ComplaintsScreen";
+import AdminComplaintDetailsScreen from "../screens/AdminComplaintDetailsScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -75,6 +78,21 @@ const AppNavigator = () => {
         <Stack.Screen
           name="MyProfile"
           component={MyProfileScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AdminPaymentDetails"
+          component={AdminPaymentDetailsScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Complaints"
+          component={ComplaintsScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AdminComplaintDetails"
+          component={AdminComplaintDetailsScreen}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

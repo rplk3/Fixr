@@ -183,6 +183,11 @@ const ServicesListScreen = () => {
               <Text style={styles.sidebarLabel}>My Bookings</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity style={styles.sidebarItem} onPress={() => { setSidebarOpen(false); navigation.navigate("Complaints"); }}>
+              <Ionicons name="warning-outline" size={22} color="#A8D5BA" />
+              <Text style={styles.sidebarLabel}>Complaints</Text>
+            </TouchableOpacity>
+
             {hasProviderRole && (
               <TouchableOpacity style={styles.sidebarItem} onPress={handleSwitchProvider}>
                 <Ionicons name="swap-horizontal-outline" size={22} color="#A8D5BA" />

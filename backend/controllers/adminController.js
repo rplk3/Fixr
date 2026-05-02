@@ -80,6 +80,16 @@ exports.deleteService = async (req, res) => {
   }
 };
 
+exports.updateService = async (req, res) => {
+  try {
+    const service = await Service.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!service) return res.status(404).json({ message: "Service not found" });
+    res.status(200).json(service);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // ──────────────────────────────────────────────
 // BOOKINGS / APPOINTMENTS
 // ──────────────────────────────────────────────
@@ -156,8 +166,81 @@ exports.deleteProvider = async (req, res) => {
 // ──────────────────────────────────────────────
 exports.getAllPayments = async (req, res) => {
   try {
-    const payments = await safeFind(Payment, {}, null, { createdAt: -1 });
+    const payments = await Payment.find()
+      .populate({ path: "customer", select: "firstName lastName email" })
+      .populate({
+        path: "booking",
+        populate: [
+          { path: "service", select: "title category" },
+          { path: "provider", select: "firstName lastName email" },
+        ],
+      })
+      .sort({ createdAt: -1 })
+      .lean();
     res.status(200).json(payments);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getPaymentById = async (req, res) => {
+  try {
+    const payment = await Payment.findById(req.params.id)
+      .populate({ path: "customer", select: "firstName lastName email" })
+      .populate({
+        path: "booking",
+        populate: [
+          { path: "service", select: "title category price" },
+          { path: "provider", select: "firstName lastName email" },
+        ],
+      })
+      .lean();
+    if (!payment) return res.status(404).json({ message: "Payment not found" });
+    res.status(200).json(payment);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.updatePaymentStatus = async (req, res) => {
+  try {
+    const { status, notes } = req.body;
+    const validStatuses = ["success", "failed", "refunded", "cancelled"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: `Invalid status. Use one of: ${validStatuses.join(", ")}` });
+    }
+
+    const payment = await Payment.findById(req.params.id);
+    if (!payment) return res.status(404).json({ message: "Payment not found" });
+
+    payment.status = status;
+    if (notes !== undefined) payment.notes = notes;
+    if (status === "success") payment.paidAt = new Date();
+    await payment.save();
+
+    // Also update booking payment-related status if needed
+    if (payment.booking) {
+      const Booking = require("../models/Booking");
+      const booking = await Booking.findById(payment.booking);
+      if (booking) {
+        if (status === "success") booking.status = "paid";
+        else if (status === "failed" || status === "cancelled") booking.status = "pending_payment";
+        else if (status === "refunded") booking.status = "cancelled";
+        await booking.save();
+      }
+    }
+
+    res.status(200).json({ message: `Payment marked as ${status}`, payment });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.deletePayment = async (req, res) => {
+  try {
+    const payment = await Payment.findByIdAndDelete(req.params.id);
+    if (!payment) return res.status(404).json({ message: "Payment not found" });
+    res.status(200).json({ message: "Payment deleted" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

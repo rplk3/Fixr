@@ -6,11 +6,15 @@ const {
   getDashboardStats,
   getAllServices,
   deleteService,
+  updateService,
   getAllBookings,
   getAllProviders,
   updateProviderStatus,
   deleteProvider,
   getAllPayments,
+  getPaymentById,
+  updatePaymentStatus,
+  deletePayment,
   getAllReviews,
   deleteReview,
   getAllUsers,
@@ -24,6 +28,7 @@ router.get("/dashboard", getDashboardStats);
 
 // Services (Category Management)
 router.get("/services", getAllServices);
+router.put("/services/:id", updateService);
 router.delete("/services/:id", deleteService);
 
 // Bookings (Appointments)
@@ -36,6 +41,9 @@ router.delete("/providers/:id", deleteProvider);
 
 // Payments (Financial Records)
 router.get("/payments", getAllPayments);
+router.get("/payments/:id", getPaymentById);
+router.put("/payments/:id/status", updatePaymentStatus);
+router.delete("/payments/:id", deletePayment);
 
 // Reviews / Feedback
 router.get("/reviews", getAllReviews);
