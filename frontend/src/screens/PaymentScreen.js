@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TextInput, TouchableOpacity, ActivityIndicator
+  TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -109,6 +109,10 @@ const PaymentScreen = () => {
         <View style={{ width: 30 }} />
       </View>
 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
       <ScrollView contentContainerStyle={s.scroll}>
         {/* Booking Details Card */}
         <View style={s.detailsCard}>
@@ -217,7 +221,9 @@ const PaymentScreen = () => {
             </>
           )}
         </TouchableOpacity>
+        </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
