@@ -11,8 +11,12 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  FlatList,
 } from "react-native";
 import { applyProvider } from "../services/authApi";
+import { getCategories } from "../services/categoryApi";
+import { Ionicons } from "@expo/vector-icons";
 
 const OnboardingScreen = ({ navigation }) => {
   const [details, setDetails] = useState({
@@ -26,6 +30,20 @@ const OnboardingScreen = ({ navigation }) => {
   });
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [catModalVisible, setCatModalVisible] = useState(false);
+
+  React.useEffect(() => {
+    const fetchCats = async () => {
+      try {
+        const data = await getCategories();
+        setCategories(data);
+      } catch (err) {
+        console.log("Failed to load categories", err);
+      }
+    };
+    fetchCats();
+  }, []);
 
   const handleChange = (key, value) => {
     setDetails((prev) => ({ ...prev, [key]: value }));
@@ -92,13 +110,15 @@ const OnboardingScreen = ({ navigation }) => {
           />
 
           <Text style={styles.label}>Category *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. Plumbing, Electrician, Cleaning"
-            placeholderTextColor="#999"
-            value={details.category}
-            onChangeText={(text) => handleChange("category", text)}
-          />
+          <TouchableOpacity 
+            style={styles.pickerButton} 
+            onPress={() => setCatModalVisible(true)}
+          >
+            <Text style={[styles.pickerButtonText, !details.category && { color: "#999" }]}>
+              {details.category || "Select a Category"}
+            </Text>
+            <Ionicons name="chevron-down" size={20} color="#666" />
+          </TouchableOpacity>
 
           <Text style={styles.label}>Price (LKR/hr) *</Text>
           <TextInput
@@ -152,6 +172,37 @@ const OnboardingScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Category Modal */}
+      <Modal visible={catModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Category</Text>
+            {categories.length === 0 ? (
+              <Text style={{ textAlign: "center", color: "#666", padding: 20 }}>No categories available</Text>
+            ) : (
+              <FlatList
+                data={categories}
+                keyExtractor={(item) => item._id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.modalItem}
+                    onPress={() => {
+                      handleChange("category", item.name);
+                      setCatModalVisible(false);
+                    }}
+                  >
+                    <Text style={styles.modalItemText}>{item.name}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+            <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setCatModalVisible(false)}>
+              <Text style={styles.modalCloseBtnText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 };
@@ -243,4 +294,17 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
   },
+  pickerButton: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    backgroundColor: "#F0F7F4", borderRadius: 10, padding: 14, marginBottom: 15,
+    borderWidth: 1, borderColor: "#E0E0E0",
+  },
+  pickerButtonText: { fontSize: 14, color: "#000" },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  modalContent: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: "50%" },
+  modalTitle: { fontSize: 18, fontWeight: "bold", color: "#135E4B", marginBottom: 15, textAlign: "center" },
+  modalItem: { paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: "#F0F0F0" },
+  modalItemText: { fontSize: 16, color: "#333", textAlign: "center" },
+  modalCloseBtn: { marginTop: 15, paddingVertical: 12, backgroundColor: "#E0E0E0", borderRadius: 10, alignItems: "center" },
+  modalCloseBtnText: { fontWeight: "bold", color: "#333" },
 });

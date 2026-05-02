@@ -11,6 +11,8 @@ import {
   getAdminPayments, getAdminReviews, deleteAdminReview,
 } from "../services/adminApi";
 import { setToken, setUser } from "../services/authApi";
+import { getCategories, createCategory, updateCategory, deleteCategory } from "../services/categoryApi";
+import { TextInput } from "react-native";
 
 const { width } = Dimensions.get("window");
 const SIDEBAR_W = width * 0.7;
@@ -18,6 +20,7 @@ const SIDEBAR_W = width * 0.7;
 const MENU = [
   { key: "dashboard", label: "Dashboard", icon: "grid-outline" },
   { key: "services", label: "Services", icon: "construct-outline" },
+  { key: "categories", label: "Categories", icon: "list-outline" },
   { key: "bookings", label: "Bookings", icon: "calendar-outline" },
   { key: "providers", label: "Providers", icon: "people-outline" },
   { key: "payments", label: "Payments", icon: "card-outline" },
@@ -27,7 +30,8 @@ const MENU = [
 
 const SUBTITLES = {
   dashboard: "Overview",
-  services: "Category Management",
+  services: "Service Management",
+  categories: "Category Management",
   bookings: "Appointments",
   providers: "Worker Profiles",
   payments: "Financial Records",
@@ -90,16 +94,23 @@ const AdminDashboardScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({});
   const [services, setServices] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [providers, setProviders] = useState([]);
   const [payments, setPayments] = useState([]);
   const [reviews, setReviews] = useState([]);
+
+  // Category Modal
+  const [catModalOpen, setCatModalOpen] = useState(false);
+  const [editingCatId, setEditingCatId] = useState(null);
+  const [catName, setCatName] = useState("");
 
   const load = useCallback(async (p) => {
     setLoading(true);
     try {
       if (p === "dashboard") setStats(await getAdminDashboard());
       else if (p === "services") setServices(await getAdminServices());
+      else if (p === "categories") setCategories(await getCategories());
       else if (p === "bookings") setBookings(await getAdminBookings());
       else if (p === "providers") setProviders(await getAdminProviders());
       else if (p === "payments") setPayments(await getAdminPayments());
@@ -147,6 +158,28 @@ const AdminDashboardScreen = ({ navigation }) => {
     ]);
   };
 
+  const handleSaveCategory = async () => {
+    if (!catName.trim()) return crossAlert("Error", "Category name is required");
+    try {
+      if (editingCatId) {
+        await updateCategory(editingCatId, catName.trim());
+      } else {
+        await createCategory(catName.trim());
+      }
+      setCatModalOpen(false);
+      load("categories");
+    } catch (e) {
+      crossAlert("Error", e.message);
+    }
+  };
+
+  const handleDeleteCategory = (id) => {
+    crossAlert("Delete", "Delete this category?", [
+      { text: "Cancel" },
+      { text: "Delete", style: "destructive", onPress: async () => { try { await deleteCategory(id); load("categories"); } catch (e) { crossAlert("Error", e.message); } } },
+    ]);
+  };
+
   // ─── Render Page Content ───
   const renderContent = () => {
     switch (page) {
@@ -168,6 +201,33 @@ const AdminDashboardScreen = ({ navigation }) => {
               </View>
             )}
           />
+        );
+      case "categories":
+        return (
+          <View style={{ flex: 1 }}>
+            <TouchableOpacity 
+              style={s.addCatBtn} 
+              onPress={() => { setEditingCatId(null); setCatName(""); setCatModalOpen(true); }}
+            >
+              <Ionicons name="add" size={20} color="#fff" />
+              <Text style={s.addCatBtnText}>Add Category</Text>
+            </TouchableOpacity>
+            <ListPage data={categories} loading={loading} onRefresh={() => load("categories")} emptyMsg="No categories yet"
+              renderItem={({ item }) => (
+                <View style={s.listItem}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.listTitle}>{item.name}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => { setEditingCatId(item._id); setCatName(item.name); setCatModalOpen(true); }} style={s.editBtn}>
+                    <Ionicons name="pencil-outline" size={20} color="#3B82F6" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDeleteCategory(item._id)} style={s.delBtn}>
+                    <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
+              )}
+            />
+          </View>
         );
       case "bookings":
         return (
@@ -285,7 +345,8 @@ const AdminDashboardScreen = ({ navigation }) => {
               <TouchableOpacity key={m.key} style={[s.sidebarItem, page === m.key && s.sidebarItemActive]} onPress={() => selectPage(m.key)}>
                 <Ionicons name={m.icon} size={20} color={page === m.key ? "#fff" : "#A8D5BA"} />
                 <Text style={[s.sidebarLabel, page === m.key && s.sidebarLabelActive]}>{m.label}</Text>
-                {m.key === "services" && <Text style={s.sidebarHint}>Category Management</Text>}
+                {m.key === "services" && <Text style={s.sidebarHint}>Service Management</Text>}
+                {m.key === "categories" && <Text style={s.sidebarHint}>Category Management</Text>}
                 {m.key === "bookings" && <Text style={s.sidebarHint}>Appointments</Text>}
                 {m.key === "providers" && <Text style={s.sidebarHint}>Worker Profiles</Text>}
                 {m.key === "payments" && <Text style={s.sidebarHint}>Financial Records</Text>}
@@ -293,6 +354,29 @@ const AdminDashboardScreen = ({ navigation }) => {
                 {m.key === "media" && <Text style={s.sidebarHint}>Images</Text>}
               </TouchableOpacity>
             ))}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Category Modal */}
+      <Modal visible={catModalOpen} transparent animationType="fade" onRequestClose={() => setCatModalOpen(false)}>
+        <View style={s.modalOverlay}>
+          <View style={s.modalBox}>
+            <Text style={s.modalTitle}>{editingCatId ? "Edit Category" : "Add Category"}</Text>
+            <TextInput
+              style={s.modalInput}
+              placeholder="Category Name"
+              value={catName}
+              onChangeText={setCatName}
+            />
+            <View style={s.modalActions}>
+              <TouchableOpacity onPress={() => setCatModalOpen(false)} style={[s.modalBtn, { backgroundColor: "#ccc" }]}>
+                <Text style={s.modalBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSaveCategory} style={[s.modalBtn, { backgroundColor: "#135E4B" }]}>
+                <Text style={s.modalBtnText}>Save</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -342,4 +426,14 @@ const s = StyleSheet.create({
   sidebarLabel: { fontSize: 15, color: "#A8D5BA", marginLeft: 14, fontWeight: "600" },
   sidebarLabelActive: { color: "#fff" },
   sidebarHint: { width: "100%", fontSize: 11, color: "rgba(168,213,186,0.6)", marginLeft: 34, marginTop: 2 },
+  addCatBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "#135E4B", alignSelf: "flex-end", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, margin: 16, marginBottom: 0 },
+  addCatBtnText: { color: "#fff", fontWeight: "bold", marginLeft: 6 },
+  editBtn: { padding: 8, marginRight: 4 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 20 },
+  modalBox: { backgroundColor: "#fff", width: "100%", borderRadius: 12, padding: 20 },
+  modalTitle: { fontSize: 18, fontWeight: "bold", color: "#135E4B", marginBottom: 16 },
+  modalInput: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 20 },
+  modalActions: { flexDirection: "row", justifyContent: "flex-end" },
+  modalBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, marginLeft: 10 },
+  modalBtnText: { color: "#fff", fontWeight: "bold" },
 });

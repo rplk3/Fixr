@@ -9,6 +9,7 @@ import * as ImagePicker from "expo-image-picker";
 import { crossAlert } from "../utils/alert";
 import { getMyServices, updateService, deleteService, createService } from "../services/serviceApi";
 import { getProviderBookings, updateBookingStatus } from "../services/bookingApi";
+import { getCategories } from "../services/categoryApi";
 
 const ProviderDashboardScreen = () => {
   const navigation = useNavigation();
@@ -28,15 +29,20 @@ const ProviderDashboardScreen = () => {
   const [location, setLocation] = useState("");
   const [imageUri, setImageUri] = useState("");
 
+  const [categories, setCategories] = useState([]);
+  const [catModalVisible, setCatModalVisible] = useState(false);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [servicesData, bookingsData] = await Promise.all([
+      const [servicesData, bookingsData, catsData] = await Promise.all([
         getMyServices(),
-        getProviderBookings()
+        getProviderBookings(),
+        getCategories()
       ]);
       setServices(servicesData);
       setBookings(bookingsData);
+      setCategories(catsData);
     } catch (e) {
       crossAlert("Error", e.message);
     }
@@ -391,7 +397,15 @@ const ProviderDashboardScreen = () => {
               <TextInput style={[st.modalInput, { minHeight: 70, textAlignVertical: "top" }]} placeholder="Describe your service" placeholderTextColor="#999" value={description} onChangeText={setDescription} multiline />
 
               <Text style={st.fieldLabel}>Category</Text>
-              <TextInput style={st.modalInput} placeholder="e.g. Plumbing, Electrical" placeholderTextColor="#999" value={category} onChangeText={setCategory} />
+              <TouchableOpacity 
+                style={st.pickerButton} 
+                onPress={() => setCatModalVisible(true)}
+              >
+                <Text style={[st.pickerButtonText, !category && { color: "#999" }]}>
+                  {category || "Select a Category"}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color="#666" />
+              </TouchableOpacity>
 
               <Text style={st.fieldLabel}>Price (LKR)</Text>
               <TextInput style={st.modalInput} placeholder="0" placeholderTextColor="#999" value={price} onChangeText={setPrice} keyboardType="numeric" />
@@ -409,6 +423,37 @@ const ProviderDashboardScreen = () => {
               </View>
             </View>
           </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Category Modal */}
+      <Modal visible={catModalVisible} transparent animationType="slide">
+        <View style={st.catModalOverlay}>
+          <View style={st.catModalContent}>
+            <Text style={st.catModalTitle}>Select Category</Text>
+            {categories.length === 0 ? (
+              <Text style={{ textAlign: "center", color: "#666", padding: 20 }}>No categories available</Text>
+            ) : (
+              <FlatList
+                data={categories}
+                keyExtractor={(item) => item._id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={st.catModalItem}
+                    onPress={() => {
+                      setCategory(item.name);
+                      setCatModalVisible(false);
+                    }}
+                  >
+                    <Text style={st.catModalItemText}>{item.name}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+            <TouchableOpacity style={st.catModalCloseBtn} onPress={() => setCatModalVisible(false)}>
+              <Text style={st.catModalCloseBtnText}>Close</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
     </SafeAreaView>
@@ -486,8 +531,21 @@ const st = StyleSheet.create({
   actionBtn: { flexDirection: "row", padding: 10, borderRadius: 8, justifyContent: "center", alignItems: "center" },
   actionBtnText: { color: "#fff", fontWeight: "bold", marginLeft: 6, fontSize: 14 },
   emptyState: { backgroundColor: "#fff", borderRadius: 16, padding: 40, alignItems: "center", margin: 16 },
-  emptyTitle: { fontSize: 18, fontWeight: "bold", color: "#135E4B", marginTop: 15 },
-  emptyDesc: { fontSize: 14, color: "#666", textAlign: "center", marginTop: 10, lineHeight: 20 },
+  emptyTitle: { fontSize: 18, fontWeight: "bold", color: "#333", marginTop: 16 },
+  emptyDesc: { fontSize: 14, color: "#666", marginTop: 8, textAlign: "center", paddingHorizontal: 20 },
+  pickerButton: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    backgroundColor: "#F8FBF9", borderRadius: 10, padding: 14, marginBottom: 16,
+    borderWidth: 1, borderColor: "#E0E0E0",
+  },
+  pickerButtonText: { fontSize: 15, color: "#000" },
+  catModalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  catModalContent: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: "50%" },
+  catModalTitle: { fontSize: 18, fontWeight: "bold", color: "#135E4B", marginBottom: 15, textAlign: "center" },
+  catModalItem: { paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: "#F0F0F0" },
+  catModalItemText: { fontSize: 16, color: "#333", textAlign: "center" },
+  catModalCloseBtn: { marginTop: 15, paddingVertical: 12, backgroundColor: "#E0E0E0", borderRadius: 10, alignItems: "center" },
+  catModalCloseBtnText: { fontWeight: "bold", color: "#333" },
   // Modal
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
   modalCard: { backgroundColor: "#fff", borderRadius: 18, padding: 24, margin: 24 },
