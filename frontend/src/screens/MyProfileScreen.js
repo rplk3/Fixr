@@ -14,8 +14,10 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { getUser, updateProfile } from "../services/authApi";
+import { getUser, updateProfile, uploadImage } from "../services/authApi";
 import { crossAlert } from "../utils/alert";
+
+const API_SERVER = "http://192.168.8.102:5000";
 
 const MyProfileScreen = ({ navigation }) => {
   const [user, setLocalUser] = useState(null);
@@ -58,12 +60,10 @@ const MyProfileScreen = ({ navigation }) => {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.5,
-      base64: true,
     });
 
-    if (!result.canceled && result.assets[0].base64) {
-      const base64Img = `data:image/jpeg;base64,${result.assets[0].base64}`;
-      setProfileImage(base64Img);
+    if (!result.canceled && result.assets[0].uri) {
+      setProfileImage(result.assets[0].uri);
     }
   };
 
@@ -84,7 +84,14 @@ const MyProfileScreen = ({ navigation }) => {
     setLoading(true);
     try {
       const fullPhone = phone ? `+94${phone}` : "";
-      const result = await updateProfile({ firstName: firstName.trim(), lastName: lastName.trim(), phone: fullPhone, profileImage });
+      let finalImageUrl = profileImage;
+      
+      // If it's a local uri, upload it
+      if (profileImage && profileImage.startsWith("file://")) {
+        finalImageUrl = await uploadImage(profileImage);
+      }
+
+      const result = await updateProfile({ firstName: firstName.trim(), lastName: lastName.trim(), phone: fullPhone, profileImage: finalImageUrl });
       setLocalUser(result.user);
       setEditing(false);
       crossAlert("Success", "Profile updated successfully!");
@@ -114,7 +121,10 @@ const MyProfileScreen = ({ navigation }) => {
           <View style={styles.imageContainer}>
             <TouchableOpacity onPress={pickImage} style={styles.imagePicker} disabled={!editing}>
               {profileImage ? (
-                <Image source={{ uri: profileImage }} style={styles.profileImage} />
+                <Image 
+                  source={{ uri: profileImage.startsWith('/uploads') ? `${API_SERVER}${profileImage}` : profileImage }} 
+                  style={styles.profileImage} 
+                />
               ) : (
                 <View style={styles.imagePlaceholder}>
                   <Ionicons name="person" size={60} color="#ccc" />

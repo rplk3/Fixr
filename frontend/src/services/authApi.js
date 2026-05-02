@@ -64,3 +64,24 @@ export const updateProfile = async (profileData) => {
   currentUser = data.user;
   return data;
 };
+
+export const uploadImage = async (imageUri) => {
+  const formData = new FormData();
+  const filename = imageUri.split('/').pop() || 'image.jpg';
+  const match = /\.(\w+)$/.exec(filename);
+  const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+  formData.append('image', { uri: imageUri, name: filename, type });
+
+  const res = await fetch(`${BASE_URL}/upload`, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      Authorization: `Bearer ${getToken()}`,
+    },
+  });
+
+  const url = await res.text();
+  if (!res.ok) throw new Error('Image upload failed');
+  return url;
+};

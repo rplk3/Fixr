@@ -13,6 +13,13 @@ connectDB().then(() => seedAdmin());
 
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
+
+const path = require("path");
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+const uploadRoutes = require("./routes/uploadRoutes");
+app.use("/api/upload", uploadRoutes);
+
 app.use("/api/services", serviceRoutes);
 
 const authRoutes = require("./routes/authRoutes");

@@ -495,7 +495,7 @@ const ProviderDashboardScreen = () => {
             <View style={st.sidebarProfile}>
               <View style={st.avatarCircle}>
                 {user?.profileImage ? (
-                  <Image source={{ uri: user.profileImage }} style={{ width: 64, height: 64, borderRadius: 32 }} />
+                  <Image source={{ uri: user.profileImage.startsWith('/uploads') ? `http://192.168.8.102:5000${user.profileImage}` : user.profileImage }} style={{ width: 64, height: 64, borderRadius: 32 }} />
                 ) : (
                   <Ionicons name="person" size={36} color="#fff" />
                 )}
