@@ -6,8 +6,7 @@ const { updateMany } = require("../models/User");
 // @access  Public
 const getServices = async (req, res) => {
   try {
-    
-    const services = await Service.find();
+    const services = await Service.find({ availability: true });
     res.status(200).json(services);
   } catch (error) {
     res.status(500).json({

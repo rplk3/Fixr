@@ -124,7 +124,7 @@ const MyBookingsScreen = () => {
           >
             <Ionicons name="star-outline" size={20} color={item.hasReviewed ? "#9CA3AF" : "#135E4B"} />
             <Text style={[s.feedbackBtnText, item.hasReviewed && s.feedbackBtnTextDisabled]}>
-              {item.hasReviewed ? "Feedback Given" : "Give Feedback"}
+              {item.hasReviewed ? "Feedback given" : "Give feedback"}
             </Text>
           </TouchableOpacity>
         )}
