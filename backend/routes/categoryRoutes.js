@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const protect = require("../middleware/authMiddleware");
-const { authorize } = require("../middleware/roleMiddleware");
+const adminOnly = require("../middleware/adminMiddleware");
 const {
   createCategory,
   getCategories,
@@ -13,8 +13,8 @@ const {
 router.get("/", getCategories);
 
 // Admin only
-router.post("/", protect, authorize("admin"), createCategory);
-router.put("/:id", protect, authorize("admin"), updateCategory);
-router.delete("/:id", protect, authorize("admin"), deleteCategory);
+router.post("/", protect, adminOnly, createCategory);
+router.put("/:id", protect, adminOnly, updateCategory);
+router.delete("/:id", protect, adminOnly, deleteCategory);
 
 module.exports = router;

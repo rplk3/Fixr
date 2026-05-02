@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   View, Text, StyleSheet, FlatList, SafeAreaView, TextInput,
-  TouchableOpacity, ActivityIndicator, Modal, Dimensions,
+  TouchableOpacity, ActivityIndicator, Modal, Dimensions, Image
 } from "react-native";
 import { crossAlert } from "../utils/alert";
 import { useNavigation } from "@react-navigation/native";
@@ -88,11 +88,7 @@ const ServicesListScreen = () => {
   const handleMyProfile = () => {
     setSidebarOpen(false);
     setTimeout(() => {
-      crossAlert(
-        "My Profile",
-        `Name: ${user?.firstName || ""} ${user?.lastName || ""}\nEmail: ${user?.email || ""}\nRoles: ${(user?.roles || []).join(", ")}\nProvider Status: ${user?.providerStatus || "none"}`,
-        [{ text: "OK" }]
-      );
+      navigation.navigate("MyProfile");
     }, 400);
   };
 
@@ -166,7 +162,11 @@ const ServicesListScreen = () => {
             {/* Profile Section */}
             <View style={styles.sidebarProfile}>
               <View style={styles.avatarCircle}>
-                <Ionicons name="person" size={36} color="#fff" />
+                {user?.profileImage ? (
+                  <Image source={{ uri: user.profileImage }} style={{ width: 64, height: 64, borderRadius: 32 }} />
+                ) : (
+                  <Ionicons name="person" size={36} color="#fff" />
+                )}
               </View>
               <Text style={styles.profileName}>{user?.firstName || "User"} {user?.lastName || ""}</Text>
               <Text style={styles.profileEmail}>{user?.email || ""}</Text>

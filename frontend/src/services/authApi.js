@@ -49,3 +49,18 @@ export const applyProvider = async (details) => {
   if (currentUser) currentUser.providerStatus = 'pending';
   return data;
 };
+
+export const updateProfile = async (profileData) => {
+  const response = await fetch(`${BASE_URL}/auth/profile`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${authToken}`,
+    },
+    body: JSON.stringify(profileData),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to update profile");
+  currentUser = data.user;
+  return data;
+};

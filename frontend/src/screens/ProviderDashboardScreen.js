@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image,
-  FlatList, ActivityIndicator, Modal, TextInput, RefreshControl, ScrollView,
+  FlatList, ActivityIndicator, Modal, TextInput, RefreshControl, ScrollView, Switch, Dimensions
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,6 +10,10 @@ import { crossAlert } from "../utils/alert";
 import { getMyServices, updateService, deleteService, createService } from "../services/serviceApi";
 import { getProviderBookings, updateBookingStatus } from "../services/bookingApi";
 import { getCategories } from "../services/categoryApi";
+import { getUser, setToken, setUser } from "../services/authApi";
+
+const { width } = Dimensions.get("window");
+const SIDEBAR_W = width * 0.72;
 
 const ProviderDashboardScreen = () => {
   const navigation = useNavigation();
@@ -17,6 +21,8 @@ const ProviderDashboardScreen = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("services"); // "services" or "bookings"
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setLocalUser] = useState(null);
 
   // Modal State
   const [modalVisible, setModalVisible] = useState(false);
@@ -49,7 +55,11 @@ const ProviderDashboardScreen = () => {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { 
+    const u = getUser();
+    if (u) setLocalUser(u);
+    fetchData(); 
+  }, [fetchData]);
 
   const activeBookingsCount = bookings.filter(b => b.status === "pending" || b.status === "confirmed").length;
 
@@ -160,15 +170,49 @@ const ProviderDashboardScreen = () => {
     )
   };
 
+  const handleToggleAvailability = async (service) => {
+    try {
+      await updateService(service._id, { availability: !service.availability });
+      crossAlert("Success", `Service marked as ${!service.availability ? 'Available' : 'Unavailable'}`);
+      fetchData();
+    } catch (e) {
+      crossAlert("Error", e.message);
+    }
+  };
+
   const handleSwitchToCustomer = () => {
-    crossAlert(
-      "Switch Mode",
-      "Are you sure you want to switch to Customer Mode?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Yes, Switch", onPress: () => navigation.replace("Services") },
-      ]
-    );
+    setSidebarOpen(false);
+    setTimeout(() => {
+      crossAlert(
+        "Switch Mode",
+        "Are you sure you want to switch to Customer Mode?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Yes, Switch", onPress: () => navigation.replace("Services") },
+        ]
+      );
+    }, 400);
+  };
+
+  const handleSignOut = () => {
+    setSidebarOpen(false);
+    setTimeout(() => {
+      crossAlert(
+        "Sign Out",
+        "Are you sure you want to sign out?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Sign Out", style: "destructive",
+            onPress: () => {
+              setToken(null);
+              setUser(null);
+              navigation.replace("Login");
+            },
+          },
+        ]
+      );
+    }, 400);
   };
 
   const renderService = ({ item }) => (
@@ -182,8 +226,16 @@ const ProviderDashboardScreen = () => {
           <Text style={st.serviceSub}>{item.category} · LKR {item.price}</Text>
           <Text style={st.serviceSub}>{item.location}</Text>
           <Text style={st.serviceDesc} numberOfLines={2}>{item.description}</Text>
-          <View style={[st.badge, item.availability ? st.badgeGreen : st.badgeRed]}>
-            <Text style={st.badgeText}>{item.availability ? "AVAILABLE" : "UNAVAILABLE"}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
+            <View style={[st.badge, item.availability ? st.badgeGreen : st.badgeRed, { marginRight: 10, marginTop: 0 }]}>
+              <Text style={st.badgeText}>{item.availability ? "AVAILABLE" : "UNAVAILABLE"}</Text>
+            </View>
+            <Switch
+              value={item.availability}
+              onValueChange={() => handleToggleAvailability(item)}
+              trackColor={{ false: "#ccc", true: "#4CB572" }}
+              thumbColor={"#fff"}
+            />
           </View>
         </View>
         <View style={st.serviceActions}>
@@ -279,14 +331,13 @@ const ProviderDashboardScreen = () => {
     <SafeAreaView style={st.container}>
       {/* Header */}
       <View style={st.header}>
-        <View>
+        <TouchableOpacity onPress={() => setSidebarOpen(true)} style={{ marginRight: 12, padding: 4 }}>
+          <Ionicons name="menu" size={28} color="#fff" />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
           <Text style={st.greeting}>Provider Dashboard</Text>
           <Text style={st.subText}>Manage your services & bookings</Text>
         </View>
-        <TouchableOpacity style={st.switchButton} onPress={handleSwitchToCustomer}>
-          <Ionicons name="swap-horizontal" size={20} color="#fff" />
-          <Text style={st.switchButtonText}>Customer Mode</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Stats */}
@@ -322,7 +373,16 @@ const ProviderDashboardScreen = () => {
         <>
           <View style={st.sectionHeader}>
             <Text style={st.sectionTitle}>My Services</Text>
-            <TouchableOpacity style={st.addBtn} onPress={openAdd}>
+            <TouchableOpacity 
+              style={[st.addBtn, services.length >= 3 && { backgroundColor: '#999' }]} 
+              onPress={() => {
+                if (services.length >= 3) {
+                  crossAlert("Limit Reached", "You can only create a maximum of 3 services.");
+                } else {
+                  openAdd();
+                }
+              }}
+            >
               <Ionicons name="add-circle" size={20} color="#fff" />
               <Text style={st.addBtnText}>Add Service</Text>
             </TouchableOpacity>
@@ -423,6 +483,50 @@ const ProviderDashboardScreen = () => {
               </View>
             </View>
           </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Sidebar Modal */}
+      <Modal visible={sidebarOpen} transparent animationType="fade" onRequestClose={() => setSidebarOpen(false)}>
+        <View style={st.overlay}>
+          <TouchableOpacity style={st.overlayBg} activeOpacity={1} onPress={() => setSidebarOpen(false)} />
+          <View style={st.sidebar}>
+            {/* Profile Section */}
+            <View style={st.sidebarProfile}>
+              <View style={st.avatarCircle}>
+                {user?.profileImage ? (
+                  <Image source={{ uri: user.profileImage }} style={{ width: 64, height: 64, borderRadius: 32 }} />
+                ) : (
+                  <Ionicons name="person" size={36} color="#fff" />
+                )}
+              </View>
+              <Text style={st.profileName}>{user?.firstName || "User"} {user?.lastName || ""}</Text>
+              <Text style={st.profileEmail}>{user?.email || ""}</Text>
+            </View>
+
+            {/* Menu Items */}
+            <TouchableOpacity style={st.sidebarItem} onPress={() => { setSidebarOpen(false); navigation.navigate("MyProfile"); }}>
+              <Ionicons name="person-circle-outline" size={22} color="#A8D5BA" />
+              <Text style={st.sidebarLabel}>My Profile</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={st.sidebarItem} onPress={() => { setSidebarOpen(false); navigation.navigate("MyBookings"); }}>
+              <Ionicons name="calendar-outline" size={22} color="#A8D5BA" />
+              <Text style={st.sidebarLabel}>My Bookings (As Customer)</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={st.sidebarItem} onPress={handleSwitchToCustomer}>
+              <Ionicons name="swap-horizontal-outline" size={22} color="#A8D5BA" />
+              <Text style={st.sidebarLabel}>Customer Mode</Text>
+            </TouchableOpacity>
+
+            <View style={st.sidebarDivider} />
+
+            <TouchableOpacity style={st.sidebarItem} onPress={handleSignOut}>
+              <Ionicons name="log-out-outline" size={22} color="#FF6B6B" />
+              <Text style={[st.sidebarLabel, { color: "#FF6B6B" }]}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
 
@@ -569,4 +673,22 @@ const st = StyleSheet.create({
   cancelBtnText: { color: "#666", fontWeight: "600" },
   saveBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, backgroundColor: "#4CB572" },
   saveBtnText: { color: "#fff", fontWeight: "bold" },
+  // Sidebar
+  overlay: { flex: 1, flexDirection: "row" },
+  overlayBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)" },
+  sidebar: {
+    position: "absolute", left: 0, top: 0, bottom: 0, width: SIDEBAR_W,
+    backgroundColor: "#135E4B", paddingVertical: 50, paddingHorizontal: 20,
+    shadowColor: "#000", shadowOffset: { width: 4, height: 0 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 15,
+  },
+  sidebarProfile: { alignItems: "center", marginBottom: 40 },
+  avatarCircle: {
+    width: 70, height: 70, borderRadius: 35, backgroundColor: "#4CB572",
+    justifyContent: "center", alignItems: "center", marginBottom: 12, borderWidth: 2, borderColor: "#A8D5BA",
+  },
+  profileName: { fontSize: 18, fontWeight: "bold", color: "#fff", marginBottom: 4 },
+  profileEmail: { fontSize: 13, color: "#A8D5BA" },
+  sidebarItem: { flexDirection: "row", alignItems: "center", paddingVertical: 14, marginBottom: 8 },
+  sidebarLabel: { fontSize: 16, color: "#fff", marginLeft: 14, fontWeight: "500" },
+  sidebarDivider: { height: 1, backgroundColor: "rgba(168,213,186,0.3)", marginVertical: 20 },
 });

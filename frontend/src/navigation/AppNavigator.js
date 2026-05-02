@@ -13,6 +13,7 @@ import AdminDashboardScreen from "../screens/AdminDashboardScreen";
 import BookingScreen from "../screens/BookingScreen";
 import MyBookingsScreen from "../screens/MyBookingsScreen";
 import PaymentScreen from "../screens/PaymentScreen";
+import MyProfileScreen from "../screens/MyProfileScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -69,6 +70,11 @@ const AppNavigator = () => {
         <Stack.Screen
           name="Payment"
           component={PaymentScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="MyProfile"
+          component={MyProfileScreen}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

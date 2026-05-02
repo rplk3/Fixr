@@ -28,6 +28,14 @@ const userSchema = new mongoose.Schema({
         enum: ['none', 'pending', 'approved', 'rejected'],
         default: 'none',
     },
+    phone: {
+        type: String,
+        default: '',
+    },
+    profileImage: {
+        type: String,
+        default: '',
+    },
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", userSchema);

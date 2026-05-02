@@ -49,6 +49,15 @@ const createService = async (req, res) => {
       });
     }
 
+    const providerId = req.user.id || req.user._id;
+
+    const count = await Service.countDocuments({ provider: providerId });
+    if (count >= 3) {
+      return res.status(400).json({
+        message: "You can only create a maximum of 3 services.",
+      });
+    }
+
     const service = await Service.create({
       title,
       description,
@@ -57,7 +66,7 @@ const createService = async (req, res) => {
       location,
       availability,
       image,
-      provider: req.user.id || req.user._id,
+      provider: providerId,
     });
 
     res.status(201).json(service);

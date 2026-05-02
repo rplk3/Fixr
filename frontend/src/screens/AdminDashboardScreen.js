@@ -19,7 +19,6 @@ const SIDEBAR_W = width * 0.7;
 
 const MENU = [
   { key: "dashboard", label: "Dashboard", icon: "grid-outline" },
-  { key: "dashboard", label: "Dashboard", icon: "grid-outline" },
   { key: "services", label: "Services", icon: "construct-outline" },
   { key: "bookings", label: "Bookings", icon: "calendar-outline" },
   { key: "providers", label: "Providers", icon: "people-outline" },
