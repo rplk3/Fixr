@@ -21,8 +21,10 @@ exports.createComplaint = async (req, res) => {
       return res.status(400).json({ message: "Invalid email format" });
     }
 
+    const userId = req.user.id || req.user._id;
+
     const complaint = await Complaint.create({
-      user: req.user._id,
+      user: userId,
       title,
       category,
       description,
@@ -42,7 +44,8 @@ exports.createComplaint = async (req, res) => {
 // @access  Private
 exports.getMyComplaints = async (req, res) => {
   try {
-    const complaints = await Complaint.find({ user: req.user._id }).sort({ createdAt: -1 }).lean();
+    const userId = req.user.id || req.user._id;
+    const complaints = await Complaint.find({ user: userId }).sort({ createdAt: -1 }).lean();
     res.status(200).json(complaints);
   } catch (error) {
     res.status(500).json({ message: error.message });
