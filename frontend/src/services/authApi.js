@@ -23,11 +23,11 @@ export const loginUser = async (email, password) => {
   return data;
 };
 
-export const registerUser = async (firstName, lastName, email, password) => {
+export const registerUser = async (firstName, lastName, email, phone, password) => {
   const response = await fetch(`${BASE_URL}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ firstName, lastName, email, password }),
+    body: JSON.stringify({ firstName, lastName, email, phone, password }),
   });
   const data = await response.json();
   if (!response.ok) throw new Error(data.message || "Registration failed");

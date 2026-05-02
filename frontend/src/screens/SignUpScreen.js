@@ -18,6 +18,7 @@ const SignUpScreen = ({ navigation }) => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -27,6 +28,19 @@ const SignUpScreen = ({ navigation }) => {
   const [apiError, setApiError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
+  const formatPhoneDisplay = (digits) => {
+    const d = digits.replace(/\D/g, "").slice(0, 9);
+    if (d.length <= 3) return d;
+    if (d.length <= 6) return `${d.slice(0, 3)} ${d.slice(3)}`;
+    return `${d.slice(0, 3)} ${d.slice(3, 7)} ${d.slice(7)}`;
+  };
+
+  const handlePhoneChange = (text) => {
+    const digits = text.replace(/\D/g, "").slice(0, 9);
+    setPhone(digits);
+    clearError("phone");
+  };
+
   const validate = () => {
     const newErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -35,6 +49,8 @@ const SignUpScreen = ({ navigation }) => {
     if (!lastName.trim()) newErrors.lastName = "Last name is required";
     if (!email.trim()) newErrors.email = "Email is required";
     else if (!emailRegex.test(email)) newErrors.email = "Invalid email format";
+    if (!phone.trim()) newErrors.phone = "Phone number is required";
+    else if (phone.length !== 9) newErrors.phone = "Phone number must be exactly 9 digits";
     if (!password) newErrors.password = "Password is required";
     else if (password.length < 6) newErrors.password = "Must be at least 6 characters";
     if (password !== confirmPassword) newErrors.confirmPassword = "Passwords do not match";
@@ -52,7 +68,8 @@ const SignUpScreen = ({ navigation }) => {
       setLoading(true);
       setApiError("");
       setSuccessMsg("");
-      await registerUser(firstName.trim(), lastName.trim(), email.trim(), password);
+      const fullPhone = `+94${phone}`;
+      await registerUser(firstName.trim(), lastName.trim(), email.trim(), fullPhone, password);
       setSuccessMsg("Account created! Redirecting to login...");
       setTimeout(() => {
         navigation.replace("Login");
@@ -108,6 +125,23 @@ const SignUpScreen = ({ navigation }) => {
             keyboardType="email-address"
           />
           {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+
+          <Text style={styles.label}>Phone Number</Text>
+          <View style={styles.phoneRow}>
+            <View style={styles.phonePrefix}>
+              <Text style={styles.phonePrefixText}>+94</Text>
+            </View>
+            <TextInput
+              style={[styles.input, styles.phoneInput, errors.phone && styles.inputError]}
+              placeholder="7XX XXX XXXX"
+              placeholderTextColor="#999"
+              value={formatPhoneDisplay(phone)}
+              onChangeText={handlePhoneChange}
+              keyboardType="phone-pad"
+              maxLength={12}
+            />
+          </View>
+          {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
 
           <Text style={styles.label}>Password</Text>
           <View style={styles.passwordContainer}>
@@ -276,5 +310,16 @@ const styles = StyleSheet.create({
   loginBold: {
     color: "#4CB572",
     fontWeight: "bold",
+  },
+  phoneRow: {
+    flexDirection: "row", alignItems: "center", marginBottom: 4,
+  },
+  phonePrefix: {
+    backgroundColor: "#135E4B", paddingHorizontal: 14, paddingVertical: 14,
+    borderTopLeftRadius: 12, borderBottomLeftRadius: 12, justifyContent: "center",
+  },
+  phonePrefixText: { color: "#fff", fontWeight: "bold", fontSize: 15 },
+  phoneInput: {
+    flex: 1, marginBottom: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0,
   },
 });

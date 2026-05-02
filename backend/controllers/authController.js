@@ -6,10 +6,10 @@ const jwt = require("jsonwebtoken");
 // Register User (always as customer)
 exports.registerUser = async (req, res) => {
   try {
-    const { firstName, lastName, email, password } = req.body || {};
+    const { firstName, lastName, email, phone, password } = req.body || {};
 
-    if (!firstName || !lastName || !email || !password) {
-      return res.status(400).json({ message: "First name, last name, email and password are required" });
+    if (!firstName || !lastName || !email || !password || !phone) {
+      return res.status(400).json({ message: "First name, last name, email, phone and password are required" });
     }
 
     // Email format check
@@ -35,6 +35,7 @@ exports.registerUser = async (req, res) => {
       firstName,
       lastName,
       email,
+      phone,
       password: hashedPassword,
       roles: ['customer'],
       providerStatus: 'none',
@@ -42,7 +43,7 @@ exports.registerUser = async (req, res) => {
 
     res.status(201).json({
       message: "User registered successfully",
-      user: { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email },
+      user: { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email, phone: user.phone },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -82,6 +83,8 @@ exports.loginUser = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+        phone: user.phone || '',
+        profileImage: user.profileImage || '',
         roles: user.roles,
         providerStatus: user.providerStatus,
       },
