@@ -49,6 +49,34 @@ export const getAdminBookings = async () => {
   return data;
 };
 
+export const getAdminBookingById = async (id) => {
+  const res = await fetch(`${BASE_URL}/admin/bookings/${id}`, { headers: authHeaders() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to fetch booking");
+  return data;
+};
+
+export const updateAdminBookingStatus = async (id, status) => {
+  const res = await fetch(`${BASE_URL}/admin/bookings/${id}/status`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: JSON.stringify({ status }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to update booking status");
+  return data;
+};
+
+export const deleteAdminBooking = async (id) => {
+  const res = await fetch(`${BASE_URL}/admin/bookings/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to delete booking");
+  return data;
+};
+
 // Providers
 export const getAdminProviders = async () => {
   const res = await fetch(`${BASE_URL}/admin/providers`, { headers: authHeaders() });

@@ -95,8 +95,48 @@ exports.updateService = async (req, res) => {
 // ──────────────────────────────────────────────
 exports.getAllBookings = async (req, res) => {
   try {
-    const bookings = await safeFind(Booking, {}, null, { createdAt: -1 });
+    const bookings = await Booking.find()
+      .populate("customer", "firstName lastName email")
+      .populate("provider", "firstName lastName email")
+      .populate("service", "title category price")
+      .sort({ createdAt: -1 })
+      .lean();
     res.status(200).json(bookings);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getBookingById = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate("customer", "firstName lastName email phone")
+      .populate("provider", "firstName lastName email phone")
+      .populate("service", "title category price")
+      .lean();
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
+    res.status(200).json(booking);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.updateBookingStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const booking = await Booking.findByIdAndUpdate(req.params.id, { status }, { new: true, runValidators: true });
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
+    res.status(200).json(booking);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.deleteBooking = async (req, res) => {
+  try {
+    const booking = await Booking.findByIdAndDelete(req.params.id);
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
+    res.status(200).json({ message: "Booking deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

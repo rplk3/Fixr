@@ -8,6 +8,9 @@ const {
   deleteService,
   updateService,
   getAllBookings,
+  getBookingById,
+  updateBookingStatus,
+  deleteBooking,
   getAllProviders,
   updateProviderStatus,
   deleteProvider,
@@ -33,6 +36,9 @@ router.delete("/services/:id", deleteService);
 
 // Bookings (Appointments)
 router.get("/bookings", getAllBookings);
+router.get("/bookings/:id", getBookingById);
+router.put("/bookings/:id/status", updateBookingStatus);
+router.delete("/bookings/:id", deleteBooking);
 
 // Providers (Worker Profiles)
 router.get("/providers", getAllProviders);

@@ -99,6 +99,10 @@ const AdminDashboardScreen = ({ navigation }) => {
   const [reviews, setReviews] = useState([]);
   const [complaints, setComplaints] = useState([]);
   const [feedbackTab, setFeedbackTab] = useState("reviews"); // "reviews" or "complaints"
+  
+  // Booking Filters
+  const [bookingStatusFilter, setBookingStatusFilter] = useState("all");
+  const [bookingPaymentFilter, setBookingPaymentFilter] = useState("all");
 
   // Category Modal
   const [catModalOpen, setCatModalOpen] = useState(false);
@@ -286,17 +290,106 @@ const AdminDashboardScreen = ({ navigation }) => {
             )}
           </View>
         );
-      case "bookings":
+      case "bookings": {
+        const filteredBookings = bookings.filter(b => {
+          const bStatus = b.status || "pending";
+          const paymentStatus = (bStatus === "paid" || bStatus === "completed") ? "success" : "pending";
+          const statusMatch = bookingStatusFilter === "all" || bStatus === bookingStatusFilter;
+          const paymentMatch = bookingPaymentFilter === "all" || paymentStatus === bookingPaymentFilter;
+          return statusMatch && paymentMatch;
+        });
+
         return (
-          <ListPage data={bookings} loading={loading} onRefresh={() => load("bookings")} emptyMsg="No bookings yet"
-            renderItem={({ item }) => (
-              <View style={s.listItem}>
-                <Text style={s.listTitle}>Booking #{(item._id || "").slice(-6)}</Text>
-                <Text style={s.listSub}>{item.status || "N/A"}</Text>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", gap: 10, marginBottom: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>Status Filter</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {["all", "pending", "pending_payment", "paid", "completed", "cancelled"].map(status => (
+                    <TouchableOpacity
+                      key={status}
+                      style={[s.subTab, bookingStatusFilter === status && s.subTabActive, { paddingVertical: 6, paddingHorizontal: 12 }]}
+                      onPress={() => setBookingStatusFilter(status)}
+                    >
+                      <Text style={[s.subTabText, bookingStatusFilter === status && s.subTabTextActive, { fontSize: 13 }]}>
+                        {status.replace("_", " ").toUpperCase()}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </View>
-            )}
-          />
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>Payment Filter</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {["all", "pending", "success"].map(pStatus => (
+                    <TouchableOpacity
+                      key={pStatus}
+                      style={[s.subTab, bookingPaymentFilter === pStatus && s.subTabActive, { paddingVertical: 6, paddingHorizontal: 12 }]}
+                      onPress={() => setBookingPaymentFilter(pStatus)}
+                    >
+                      <Text style={[s.subTabText, bookingPaymentFilter === pStatus && s.subTabTextActive, { fontSize: 13 }]}>
+                        {pStatus.toUpperCase()}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+
+            <ListPage data={filteredBookings} loading={loading} onRefresh={() => load("bookings")} emptyMsg="No bookings found"
+              renderItem={({ item }) => {
+                const bStatus = item.status || "pending";
+                const pStatus = (bStatus === "paid" || bStatus === "completed") ? "success" : "pending";
+                
+                return (
+                  <TouchableOpacity 
+                    style={[s.listItem, { paddingVertical: 16 }]}
+                    onPress={() => navigation.navigate("AdminBookingDetails", { bookingId: item._id })}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                        <Text style={[s.listTitle, { flex: 1, marginRight: 8 }]} numberOfLines={1}>
+                          {item.service?.title || "Unknown Service"}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: "#6B7280" }}>{item.date} {item.time}</Text>
+                      </View>
+                      
+                      <View style={{ flexDirection: "row", marginBottom: 6 }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 12, color: "#6B7280" }}>Customer</Text>
+                          <Text style={{ fontSize: 14, color: "#374151", fontWeight: "500" }}>
+                            {item.customer?.firstName} {item.customer?.lastName}
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 12, color: "#6B7280" }}>Provider</Text>
+                          <Text style={{ fontSize: 14, color: "#374151", fontWeight: "500" }}>
+                            {item.provider?.firstName} {item.provider?.lastName}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8 }}>
+                        <View style={[s.badge, bStatus === "completed" ? s.badgeGreen : bStatus === "cancelled" ? s.badgeRed : s.badgeYellow, { marginRight: 8, marginTop: 0 }]}>
+                          <Text style={s.badgeText}>{bStatus.replace("_", " ").toUpperCase()}</Text>
+                        </View>
+                        <View style={[s.badge, pStatus === "success" ? s.badgeGreen : s.badgeRed, { marginTop: 0 }]}>
+                          <Text style={s.badgeText}>{pStatus.toUpperCase()} PAY</Text>
+                        </View>
+                      </View>
+                    </View>
+                    
+                    <Ionicons name="chevron-forward" size={20} color="#9CA3AF" style={{ alignSelf: "center", marginLeft: 10 }} />
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
         );
+      }
       case "providers":
         return (
           <ListPage data={providers} loading={loading} onRefresh={() => load("providers")} emptyMsg="No provider applications"

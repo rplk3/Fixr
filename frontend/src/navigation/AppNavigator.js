@@ -17,6 +17,7 @@ import MyProfileScreen from "../screens/MyProfileScreen";
 import AdminPaymentDetailsScreen from "../screens/AdminPaymentDetailsScreen";
 import ComplaintsScreen from "../screens/ComplaintsScreen";
 import AdminComplaintDetailsScreen from "../screens/AdminComplaintDetailsScreen";
+import AdminBookingDetailsScreen from "../screens/AdminBookingDetailsScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -93,6 +94,11 @@ const AppNavigator = () => {
         <Stack.Screen
           name="AdminComplaintDetails"
           component={AdminComplaintDetailsScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AdminBookingDetails"
+          component={AdminBookingDetailsScreen}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>
