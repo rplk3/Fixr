@@ -18,9 +18,11 @@ const paymentSchema = new mongoose.Schema(
     cardLastFour: { type: String, required: true },
     status: {
       type: String,
-      enum: ["success", "failed"],
+      enum: ["success", "failed", "refunded", "cancelled"],
       default: "success",
     },
+    paidAt: { type: Date, default: Date.now },
+    notes: { type: String, default: "" },
   },
   { timestamps: true }
 );

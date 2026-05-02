@@ -332,7 +332,7 @@ const ProviderDashboardScreen = () => {
       {/* Header */}
       <View style={st.header}>
         <TouchableOpacity onPress={() => setSidebarOpen(true)} style={{ marginRight: 12, padding: 4 }}>
-          <Ionicons name="menu" size={28} color="#fff" />
+          <Ionicons name="menu" size={28} color="#135E4B" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={st.greeting}>Provider Dashboard</Text>
