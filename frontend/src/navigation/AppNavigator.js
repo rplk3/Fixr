@@ -39,7 +39,7 @@ const AppNavigator = () => {
         <Stack.Screen
           name="Details"
           component={ServiceDetailsScreen}
-          options={{ headerShown: true, title: "Service Details" }}
+          options={{ headerShown: false }}
         />
         <Stack.Screen
           name="AddService"
