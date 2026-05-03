@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from "react";
 import {
+  View, Text, StyleSheet, SafeAreaView,
   TextInput, TouchableOpacity, ActivityIndicator, Platform
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { crossAlert } from "../utils/alert";

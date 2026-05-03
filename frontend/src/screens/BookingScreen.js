@@ -4,7 +4,7 @@ import {
   TextInput, TouchableOpacity, Platform, Modal, FlatList,
   StatusBar
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { crossAlert } from "../utils/alert";

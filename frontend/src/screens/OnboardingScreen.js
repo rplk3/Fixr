@@ -13,7 +13,7 @@ import {
   Modal,
   FlatList,
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import { applyProvider } from "../services/authApi";
 import { getCategories } from "../services/categoryApi";
 import { Ionicons } from "@expo/vector-icons";
@@ -123,7 +123,7 @@ const OnboardingScreen = ({ navigation }) => {
             <Ionicons name="chevron-down" size={20} color="#666" />
           </TouchableOpacity>
 
-          <Text style={styles.label}>Price (LKR/hr) *</Text>
+          <Text style={styles.label}>Price (Rs. per hour) *</Text>
           <TextInput
             style={styles.input}
             placeholder="e.g. 1500"

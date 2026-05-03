@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity,
   TextInput, ActivityIndicator, RefreshControl, Modal, Dimensions
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import { Ionicons } from "@expo/vector-icons";
 import { crossAlert } from "../utils/alert";
 import { createComplaint, getMyComplaints } from "../services/complaintApi";

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
-  FlatList, ActivityIndicator, Image, RefreshControl, Modal, TextInput
+  FlatList, ActivityIndicator, Image, RefreshControl, Modal, TextInput, Platform, StatusBar
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -75,56 +75,80 @@ const MyBookingsScreen = () => {
     setSubmittingFeedback(false);
   };
 
+  const statusConfig = {
+    pending:         { label: "Pending Review",   bg: "#FEF9C3", color: "#92400E", icon: "time-outline" },
+    pending_payment: { label: "Awaiting Payment", bg: "#FEF3C7", color: "#B45309", icon: "card-outline" },
+    paid:            { label: "Payment Done",     bg: "#D1FAE5", color: "#065F46", icon: "checkmark-circle-outline" },
+    confirmed:       { label: "Confirmed",        bg: "#DBEAFE", color: "#1E40AF", icon: "checkmark-done-outline" },
+    completed:       { label: "Completed",        bg: "#EDE9FE", color: "#5B21B6", icon: "ribbon-outline" },
+    cancelled:       { label: "Cancelled",        bg: "#FEE2E2", color: "#991B1B", icon: "close-circle-outline" },
+  };
+
   const renderItem = ({ item }) => {
+    const cfg = statusConfig[item.status] || { label: item.status.toUpperCase(), bg: "#F3F4F6", color: "#374151", icon: "ellipse-outline" };
     return (
       <View style={s.card}>
-        <View style={s.header}>
-          <Text style={s.serviceTitle}>{item.service?.title || "Service"}</Text>
-          <View style={[s.badge, s[`badge_${item.status}`]]}>
-            <Text style={s.badgeText}>
-              {item.status === "paid" ? "PAYMENT SUCCESSFUL" : 
-               item.status === "pending_payment" ? "PENDING PAYMENT" : 
-               item.status.toUpperCase()}
-            </Text>
+        {/* Top row: service name + status */}
+        <View style={s.cardTopRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.serviceTitle} numberOfLines={1}>{item.service?.title || "Service"}</Text>
+            <Text style={s.bookingId}>#{item._id?.slice(-6).toUpperCase()}</Text>
+          </View>
+          <View style={[s.statusBadge, { backgroundColor: cfg.bg }]}>
+            <Ionicons name={cfg.icon} size={12} color={cfg.color} />
+            <Text style={[s.statusBadgeText, { color: cfg.color }]}>{cfg.label}</Text>
           </View>
         </View>
 
-        <Text style={s.providerText}>
-          Provider: {item.provider?.firstName} {item.provider?.lastName}
-        </Text>
-        
-        <View style={s.row}>
-          <Ionicons name="calendar-outline" size={16} color="#666" />
-          <Text style={s.infoText}>{item.date}</Text>
-        </View>
-        <View style={s.row}>
-          <Ionicons name="time-outline" size={16} color="#666" />
-          <Text style={s.infoText}>{item.time}</Text>
-        </View>
-        <View style={s.row}>
-          <Ionicons name="cash-outline" size={16} color="#666" />
-          <Text style={s.infoText}>LKR {item.service?.price}</Text>
+        <View style={s.divider} />
+
+        {/* Provider info */}
+        <View style={s.infoRow}>
+          <View style={s.infoIcon}><Ionicons name="person-outline" size={14} color="#135E4B" /></View>
+          <View>
+            <Text style={s.infoLabel}>Provider</Text>
+            <Text style={s.infoValue}>{item.provider?.firstName} {item.provider?.lastName}</Text>
+          </View>
         </View>
 
+        {/* Schedule box */}
+        <View style={s.scheduleBox}>
+          <View style={s.scheduleRow}>
+            <Ionicons name="calendar-outline" size={14} color="#4CB572" />
+            <Text style={s.scheduleText}>{item.date}</Text>
+            <View style={s.scheduleDot} />
+            <Ionicons name="time-outline" size={14} color="#4CB572" />
+            <Text style={s.scheduleText}>{item.time}</Text>
+          </View>
+        </View>
+
+        {/* Price */}
+        <View style={s.priceRow}>
+          <Ionicons name="cash-outline" size={14} color="#6B7280" />
+          <Text style={s.priceText}>Rs. {item.service?.price?.toLocaleString()} / hr</Text>
+        </View>
+
+        {/* Pay Now button */}
         {item.status === "pending_payment" && (
           <TouchableOpacity
             style={s.payBtn}
             onPress={() => navigation.navigate("Payment", { booking: item })}
           >
-            <Ionicons name="card-outline" size={20} color="#fff" />
-            <Text style={s.payBtnText}>Pay Now to get the service</Text>
+            <Ionicons name="card-outline" size={18} color="#fff" />
+            <Text style={s.payBtnText}>Pay Now to Confirm</Text>
           </TouchableOpacity>
         )}
 
+        {/* Feedback button */}
         {item.status === "completed" && (
           <TouchableOpacity
             style={[s.feedbackBtn, item.hasReviewed && s.feedbackBtnDisabled]}
             onPress={() => !item.hasReviewed && openFeedbackModal(item.service?._id, item._id)}
             disabled={item.hasReviewed}
           >
-            <Ionicons name="star-outline" size={20} color={item.hasReviewed ? "#9CA3AF" : "#135E4B"} />
+            <Ionicons name={item.hasReviewed ? "checkmark-circle-outline" : "star-outline"} size={18} color={item.hasReviewed ? "#9CA3AF" : "#135E4B"} />
             <Text style={[s.feedbackBtnText, item.hasReviewed && s.feedbackBtnTextDisabled]}>
-              {item.hasReviewed ? "Feedback given" : "Give feedback"}
+              {item.hasReviewed ? "Feedback Given" : "Leave a Review"}
             </Text>
           </TouchableOpacity>
         )}
@@ -211,40 +235,45 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#CCDCDB" },
   topBar: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 16, paddingVertical: 14, backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight || 24) + 10 : 16,
+    paddingBottom: 14,
+    backgroundColor: "#fff",
     borderBottomWidth: 1, borderBottomColor: "#E0E0E0"
   },
   screenTitle: { fontSize: 18, fontWeight: "bold", color: "#135E4B" },
   card: {
-    backgroundColor: "#fff", borderRadius: 12, padding: 16, marginBottom: 16,
-    elevation: 2, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
+    backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 14,
+    elevation: 2, shadowColor: "#000", shadowOpacity: 0.07, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
   },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  serviceTitle: { fontSize: 18, fontWeight: "bold", color: "#135E4B" },
-  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  badge_pending: { backgroundColor: "#FEF3C7" },
-  badge_pending_payment: { backgroundColor: "#FEF3C7" },
-  badge_paid: { backgroundColor: "#D1FAE5" },
-  badge_confirmed: { backgroundColor: "#D1FAE5" },
-  badge_completed: { backgroundColor: "#DBEAFE" },
-  badge_cancelled: { backgroundColor: "#FEE2E2" },
-  badgeText: { fontSize: 11, fontWeight: "bold", color: "#333" },
-  providerText: { fontSize: 14, color: "#4CB572", marginBottom: 12, fontWeight: "500" },
-  row: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
-  infoText: { fontSize: 14, color: "#666", marginLeft: 8 },
+  cardTopRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
+  serviceTitle: { fontSize: 16, fontWeight: "700", color: "#135E4B", flex: 1 },
+  bookingId: { fontSize: 11, color: "#9CA3AF", marginTop: 2 },
+  statusBadge: { flexDirection: "row", alignItems: "center", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, marginLeft: 8 },
+  statusBadgeText: { fontSize: 11, fontWeight: "700", marginLeft: 4 },
+  divider: { height: 1, backgroundColor: "#F3F4F6", marginVertical: 12 },
+  infoRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
+  infoIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#E8F5EF", alignItems: "center", justifyContent: "center", marginRight: 10 },
+  infoLabel: { fontSize: 11, color: "#9CA3AF", fontWeight: "500" },
+  infoValue: { fontSize: 14, color: "#1F2937", fontWeight: "600" },
+  scheduleBox: { backgroundColor: "#F8FBF9", borderRadius: 10, padding: 10, marginBottom: 10 },
+  scheduleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  scheduleText: { fontSize: 13, color: "#374151", fontWeight: "500" },
+  scheduleDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "#D1D5DB" },
+  priceRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
+  priceText: { fontSize: 13, color: "#6B7280", fontWeight: "500" },
   payBtn: {
-    backgroundColor: "#135E4B", padding: 12, borderRadius: 8, marginTop: 12,
-    flexDirection: "row", justifyContent: "center", alignItems: "center"
+    backgroundColor: "#135E4B", padding: 13, borderRadius: 10, marginTop: 12,
+    flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8,
   },
-  payBtnText: { color: "#fff", fontWeight: "bold", fontSize: 15, marginLeft: 8 },
+  payBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   feedbackBtn: {
-    backgroundColor: "#E0ECEB", padding: 12, borderRadius: 8, marginTop: 12,
-    flexDirection: "row", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#135E4B"
+    backgroundColor: "#E8F5EF", padding: 12, borderRadius: 10, marginTop: 10,
+    flexDirection: "row", justifyContent: "center", alignItems: "center",
+    borderWidth: 1.5, borderColor: "#4CB572", gap: 8,
   },
-  feedbackBtnDisabled: {
-    backgroundColor: "#F3F4F6", borderColor: "#D1D5DB"
-  },
-  feedbackBtnText: { color: "#135E4B", fontWeight: "bold", fontSize: 15, marginLeft: 8 },
+  feedbackBtnDisabled: { backgroundColor: "#F9FAFB", borderColor: "#E5E7EB" },
+  feedbackBtnText: { color: "#135E4B", fontWeight: "700", fontSize: 14 },
   feedbackBtnTextDisabled: { color: "#9CA3AF" },
   empty: { flex: 1, justifyContent: "center", alignItems: "center" },
   emptyText: { fontSize: 16, color: "#999", marginTop: 12 },

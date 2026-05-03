@@ -627,8 +627,8 @@ const AdminDashboardScreen = ({ navigation }) => {
               <Text style={s.fieldLabel}>Category</Text>
               <TextInput style={s.modalInput} placeholder="Category" value={svcCategory} onChangeText={setSvcCategory} />
 
-              <Text style={s.fieldLabel}>Price (LKR)</Text>
-              <TextInput style={s.modalInput} placeholder="0" value={svcPrice} onChangeText={setSvcPrice} keyboardType="numeric" />
+              <Text style={s.fieldLabel}>Price (Rs. per hour)</Text>
+              <TextInput style={s.modalInput} placeholder="e.g. 1500" value={svcPrice} onChangeText={setSvcPrice} keyboardType="numeric" />
 
               <Text style={s.fieldLabel}>Location</Text>
               <TextInput style={s.modalInput} placeholder="City or area" value={svcLocation} onChangeText={setSvcLocation} />

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image,
-  FlatList, ActivityIndicator, Modal, TextInput, RefreshControl, ScrollView, Switch, Dimensions
+  FlatList, ActivityIndicator, Modal, TextInput, RefreshControl, ScrollView, Switch, Dimensions, Platform, StatusBar
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -221,16 +221,55 @@ const ProviderDashboardScreen = () => {
     <View style={st.serviceCard}>
       {item.image ? (
         <Image source={{ uri: item.image }} style={st.serviceImg} />
-      ) : null}
+      ) : (
+        <View style={st.serviceImgPlaceholder}>
+          <Ionicons name="construct-outline" size={36} color="#A8D5BA" />
+        </View>
+      )}
       <View style={st.serviceBody}>
         <View style={{ flex: 1 }}>
-          <Text style={st.serviceTitle}>{item.title}</Text>
-          <Text style={st.serviceSub}>{item.category} · LKR {item.price}</Text>
-          <Text style={st.serviceSub}>{item.location}</Text>
+          {/* Title + Actions row */}
+          <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+            <Text style={st.serviceTitle} numberOfLines={1}>{item.title}</Text>
+            <View style={{ flexDirection: "row", gap: 6, marginLeft: 8 }}>
+              <TouchableOpacity style={st.editBtn} onPress={() => openEdit(item)}>
+                <Ionicons name="create-outline" size={18} color="#3B82F6" />
+              </TouchableOpacity>
+              <TouchableOpacity style={st.deleteBtn} onPress={() => handleDelete(item._id, item.title)}>
+                <Ionicons name="trash-outline" size={18} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Category chip */}
+          <View style={st.categoryChip}>
+            <Ionicons name="pricetag-outline" size={11} color="#135E4B" />
+            <Text style={st.categoryChipText}>{item.category}</Text>
+          </View>
+
+          {/* Price */}
+          <View style={st.priceRow}>
+            <Text style={st.priceLabel}>Rs.</Text>
+            <Text style={st.priceValue}>{item.price?.toLocaleString()}</Text>
+            <Text style={st.priceUnit}> / hr</Text>
+          </View>
+
+          {/* Location */}
+          <View style={st.infoRowSmall}>
+            <Ionicons name="location-outline" size={13} color="#888" />
+            <Text style={st.infoTextSmall} numberOfLines={1}>{item.location}</Text>
+          </View>
+
+          {/* Description */}
           <Text style={st.serviceDesc} numberOfLines={2}>{item.description}</Text>
-          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
-            <View style={[st.badge, item.availability ? st.badgeGreen : st.badgeRed, { marginRight: 10, marginTop: 0 }]}>
-              <Text style={st.badgeText}>{item.availability ? "AVAILABLE" : "UNAVAILABLE"}</Text>
+
+          {/* Availability toggle */}
+          <View style={st.availabilityRow}>
+            <View style={[st.availBadge, item.availability ? st.availBadgeOn : st.availBadgeOff]}>
+              <View style={[st.availDot, { backgroundColor: item.availability ? "#16A34A" : "#DC2626" }]} />
+              <Text style={[st.availText, { color: item.availability ? "#16A34A" : "#DC2626" }]}>
+                {item.availability ? "Available" : "Unavailable"}
+              </Text>
             </View>
             <Switch
               value={item.availability}
@@ -240,94 +279,113 @@ const ProviderDashboardScreen = () => {
             />
           </View>
         </View>
-        <View style={st.serviceActions}>
-          <TouchableOpacity style={st.editBtn} onPress={() => openEdit(item)}>
-            <Ionicons name="create-outline" size={20} color="#3B82F6" />
-          </TouchableOpacity>
-          <TouchableOpacity style={st.deleteBtn} onPress={() => handleDelete(item._id, item.title)}>
-            <Ionicons name="trash-outline" size={20} color="#EF4444" />
-          </TouchableOpacity>
-        </View>
       </View>
     </View>
   );
 
-  const renderBooking = ({ item }) => (
-    <View style={st.serviceCard}>
-      <View style={st.serviceBody}>
-        <View style={{ flex: 1 }}>
-          <View style={st.bookingHeader}>
-            <Text style={st.serviceTitle}>{item.service?.title || "Service"}</Text>
-            <View style={[st.badge, st[`badge_${item.status}`]]}>
-              <Text style={st.badgeText}>
-                {item.status === "paid" ? "PAYMENT RECEIVED" : 
-                 item.status === "pending_payment" ? "PENDING PAYMENT" : 
-                 item.status.toUpperCase()}
-              </Text>
-            </View>
+  const statusConfig = {
+    pending:         { label: "Pending Review",   bg: "#FEF9C3", color: "#92400E", icon: "time-outline" },
+    pending_payment: { label: "Awaiting Payment", bg: "#FEF3C7", color: "#B45309", icon: "card-outline" },
+    paid:            { label: "Payment Received", bg: "#D1FAE5", color: "#065F46", icon: "checkmark-circle-outline" },
+    confirmed:       { label: "Confirmed",        bg: "#DBEAFE", color: "#1E40AF", icon: "checkmark-done-outline" },
+    completed:       { label: "Completed",        bg: "#EDE9FE", color: "#5B21B6", icon: "ribbon-outline" },
+    cancelled:       { label: "Cancelled",        bg: "#FEE2E2", color: "#991B1B", icon: "close-circle-outline" },
+  };
+
+  const renderBooking = ({ item }) => {
+    const cfg = statusConfig[item.status] || { label: item.status.toUpperCase(), bg: "#F3F4F6", color: "#374151", icon: "ellipse-outline" };
+    return (
+      <View style={st.bookingCard}>
+        {/* Top: service name + status badge */}
+        <View style={st.bookingTopRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={st.bookingServiceName} numberOfLines={1}>{item.service?.title || "Service"}</Text>
+            <Text style={st.bookingId}>#{item._id?.slice(-6).toUpperCase()}</Text>
           </View>
-          
-          <Text style={st.serviceSub}>
-            Customer: {item.customer?.firstName} {item.customer?.lastName}
-          </Text>
-          <Text style={st.serviceDesc}>
-            <Ionicons name="call-outline" size={12} /> {item.phone || "N/A"}
-          </Text>
-          
-          <View style={{ marginTop: 8 }}>
-            <View style={st.row}>
-              <Ionicons name="calendar-outline" size={14} color="#666" />
-              <Text style={st.infoText}>{item.date}</Text>
-            </View>
-            <View style={st.row}>
-              <Ionicons name="time-outline" size={14} color="#666" />
-              <Text style={st.infoText}>{item.time}</Text>
-            </View>
-            <View style={st.row}>
-              <Ionicons name="location-outline" size={14} color="#666" />
-              <Text style={st.infoText}>{item.location}</Text>
-            </View>
+          <View style={[st.statusBadge, { backgroundColor: cfg.bg }]}>
+            <Ionicons name={cfg.icon} size={12} color={cfg.color} />
+            <Text style={[st.statusBadgeText, { color: cfg.color }]}>{cfg.label}</Text>
           </View>
-
-          {item.notes ? (
-            <Text style={st.notesBox}><Text style={{fontWeight: 'bold'}}>Notes:</Text> {item.notes}</Text>
-          ) : null}
-          
-          {item.status === "pending" && (
-            <View style={st.bookingActionRow}>
-              <TouchableOpacity 
-                style={[st.actionBtn, { backgroundColor: "#EF4444", flex: 1, marginRight: 6 }]} 
-                onPress={() => handleBookingAction(item._id, "cancelled", "Reject")}
-              >
-                <Ionicons name="close-circle-outline" size={18} color="#fff" />
-                <Text style={st.actionBtnText}>Reject</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[st.actionBtn, { backgroundColor: "#4CB572", flex: 1, marginLeft: 6 }]} 
-                onPress={() => handleBookingAction(item._id, "pending_payment", "Accept")}
-              >
-                <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
-                <Text style={st.actionBtnText}>Accept</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {item.status === "paid" && (
-            <View style={st.bookingActionRow}>
-              <TouchableOpacity 
-                style={[st.actionBtn, { backgroundColor: "#3B82F6", flex: 1 }]} 
-                onPress={() => handleBookingAction(item._id, "completed", "Mark as Completed")}
-              >
-                <Ionicons name="checkmark-done-circle-outline" size={18} color="#fff" />
-                <Text style={st.actionBtnText}>Mark Completed</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
         </View>
+
+        <View style={st.bookingDivider} />
+
+        {/* Customer info */}
+        <View style={st.bookingInfoSection}>
+          <View style={st.bookingInfoRow}>
+            <View style={st.bookingInfoIcon}>
+              <Ionicons name="person-outline" size={14} color="#135E4B" />
+            </View>
+            <View>
+              <Text style={st.bookingInfoLabel}>Customer</Text>
+              <Text style={st.bookingInfoValue}>{item.customer?.firstName} {item.customer?.lastName}</Text>
+            </View>
+          </View>
+          <View style={st.bookingInfoRow}>
+            <View style={st.bookingInfoIcon}>
+              <Ionicons name="call-outline" size={14} color="#135E4B" />
+            </View>
+            <View>
+              <Text style={st.bookingInfoLabel}>Phone</Text>
+              <Text style={st.bookingInfoValue}>{item.phone || "Not provided"}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Schedule details */}
+        <View style={st.bookingScheduleBox}>
+          <View style={st.bookingScheduleRow}>
+            <Ionicons name="calendar-outline" size={14} color="#4CB572" />
+            <Text style={st.bookingScheduleText}>{item.date}</Text>
+            <View style={st.scheduleDot} />
+            <Ionicons name="time-outline" size={14} color="#4CB572" />
+            <Text style={st.bookingScheduleText}>{item.time}</Text>
+          </View>
+          <View style={st.bookingInfoRow}>
+            <Ionicons name="location-outline" size={14} color="#4CB572" />
+            <Text style={st.bookingLocationText} numberOfLines={2}>{item.location}</Text>
+          </View>
+        </View>
+
+        {/* Notes */}
+        {item.notes ? (
+          <View style={st.notesBox}>
+            <Ionicons name="document-text-outline" size={13} color="#6B7280" />
+            <Text style={st.notesText}><Text style={{ fontWeight: "700" }}>Notes: </Text>{item.notes}</Text>
+          </View>
+        ) : null}
+
+        {/* Actions */}
+        {item.status === "pending" && (
+          <View style={st.bookingActionRow}>
+            <TouchableOpacity
+              style={[st.actionBtn, { backgroundColor: "#FEE2E2", flex: 1, marginRight: 6 }]}
+              onPress={() => handleBookingAction(item._id, "cancelled", "Reject")}
+            >
+              <Ionicons name="close-circle-outline" size={18} color="#DC2626" />
+              <Text style={[st.actionBtnText, { color: "#DC2626" }]}>Reject</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[st.actionBtn, { backgroundColor: "#D1FAE5", flex: 1, marginLeft: 6 }]}
+              onPress={() => handleBookingAction(item._id, "pending_payment", "Accept")}
+            >
+              <Ionicons name="checkmark-circle-outline" size={18} color="#065F46" />
+              <Text style={[st.actionBtnText, { color: "#065F46" }]}>Accept</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {item.status === "paid" && (
+          <TouchableOpacity
+            style={[st.actionBtn, { backgroundColor: "#DBEAFE", marginTop: 10 }]}
+            onPress={() => handleBookingAction(item._id, "completed", "Mark as Completed")}
+          >
+            <Ionicons name="checkmark-done-circle-outline" size={18} color="#1E40AF" />
+            <Text style={[st.actionBtnText, { color: "#1E40AF" }]}>Mark as Completed</Text>
+          </TouchableOpacity>
+        )}
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={st.container}>
@@ -469,8 +527,8 @@ const ProviderDashboardScreen = () => {
                 <Ionicons name="chevron-down" size={20} color="#666" />
               </TouchableOpacity>
 
-              <Text style={st.fieldLabel}>Price (LKR)</Text>
-              <TextInput style={st.modalInput} placeholder="0" placeholderTextColor="#999" value={price} onChangeText={setPrice} keyboardType="numeric" />
+              <Text style={st.fieldLabel}>Price (Rs. per hour)</Text>
+              <TextInput style={st.modalInput} placeholder="e.g. 1500" placeholderTextColor="#999" value={price} onChangeText={setPrice} keyboardType="numeric" />
 
               <Text style={st.fieldLabel}>Location</Text>
               <TextInput style={st.modalInput} placeholder="City or area" placeholderTextColor="#999" value={location} onChangeText={setLocation} />
@@ -571,7 +629,10 @@ export default ProviderDashboardScreen;
 const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#CCDCDB" },
   header: {
-    backgroundColor: "#fff", paddingHorizontal: 20, paddingTop: 44, paddingBottom: 16,
+    backgroundColor: "#fff",
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight || 24) + 10 : 44,
+    paddingBottom: 16,
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
     borderBottomWidth: 1, borderBottomColor: "#E0E0E0",
   },
@@ -607,35 +668,64 @@ const st = StyleSheet.create({
     paddingVertical: 8, borderRadius: 8, alignItems: "center",
   },
   addBtnText: { color: "#fff", fontWeight: "bold", fontSize: 13, marginLeft: 6 },
+  // ── Service Card ──
   serviceCard: {
-    backgroundColor: "#fff", borderRadius: 14, marginBottom: 10, overflow: "hidden",
-    elevation: 1, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 3, shadowOffset: { width: 0, height: 1 },
+    backgroundColor: "#fff", borderRadius: 16, marginBottom: 12, overflow: "hidden",
+    elevation: 2, shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
   },
-  serviceImg: { width: "100%", height: 140, resizeMode: "cover" },
-  serviceBody: { padding: 16, flexDirection: "row", alignItems: "flex-start" },
-  serviceTitle: { fontSize: 16, fontWeight: "bold", color: "#135E4B" },
-  serviceSub: { fontSize: 13, color: "#666", marginTop: 2 },
-  serviceDesc: { fontSize: 12, color: "#999", marginTop: 4 },
-  serviceActions: { marginLeft: 10, alignItems: "center", gap: 8 },
-  editBtn: { padding: 8, backgroundColor: "#EBF5FF", borderRadius: 8 },
-  deleteBtn: { padding: 8, backgroundColor: "#FEE2E2", borderRadius: 8 },
-  badge: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginTop: 6 },
-  badgeGreen: { backgroundColor: "#D1FAE5" },
-  badgeRed: { backgroundColor: "#FEE2E2" },
-  badge_pending: { backgroundColor: "#FEF3C7" },
-  badge_pending_payment: { backgroundColor: "#FEF3C7" },
-  badge_paid: { backgroundColor: "#D1FAE5" },
-  badge_confirmed: { backgroundColor: "#D1FAE5" },
-  badge_completed: { backgroundColor: "#DBEAFE" },
-  badge_cancelled: { backgroundColor: "#FEE2E2" },
-  badgeText: { fontSize: 10, fontWeight: "bold", color: "#333" },
-  bookingHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  row: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
-  infoText: { fontSize: 13, color: "#666", marginLeft: 6 },
-  notesBox: { backgroundColor: "#F9FAFB", padding: 10, borderRadius: 8, marginTop: 8, fontSize: 13, color: "#555" },
-  bookingActionRow: { flexDirection: "row", marginTop: 14 },
-  actionBtn: { flexDirection: "row", padding: 10, borderRadius: 8, justifyContent: "center", alignItems: "center" },
-  actionBtnText: { color: "#fff", fontWeight: "bold", marginLeft: 6, fontSize: 14 },
+  serviceImg: { width: "100%", height: 150, resizeMode: "cover" },
+  serviceImgPlaceholder: {
+    width: "100%", height: 80, backgroundColor: "#E8F5EF",
+    alignItems: "center", justifyContent: "center",
+  },
+  serviceBody: { padding: 14 },
+  serviceTitle: { fontSize: 16, fontWeight: "700", color: "#135E4B", flex: 1 },
+  serviceDesc: { fontSize: 12, color: "#9CA3AF", marginTop: 6, lineHeight: 18 },
+  editBtn: { padding: 7, backgroundColor: "#EBF5FF", borderRadius: 8 },
+  deleteBtn: { padding: 7, backgroundColor: "#FEE2E2", borderRadius: 8 },
+  categoryChip: {
+    flexDirection: "row", alignItems: "center", alignSelf: "flex-start",
+    backgroundColor: "#E8F5EF", borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3, marginTop: 6,
+  },
+  categoryChipText: { fontSize: 11, color: "#135E4B", fontWeight: "600", marginLeft: 3 },
+  priceRow: { flexDirection: "row", alignItems: "baseline", marginTop: 8 },
+  priceLabel: { fontSize: 13, color: "#4CB572", fontWeight: "600" },
+  priceValue: { fontSize: 20, fontWeight: "800", color: "#135E4B", marginLeft: 2 },
+  priceUnit: { fontSize: 12, color: "#9CA3AF" },
+  infoRowSmall: { flexDirection: "row", alignItems: "center", marginTop: 4 },
+  infoTextSmall: { fontSize: 12, color: "#9CA3AF", marginLeft: 4, flex: 1 },
+  availabilityRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: "#F3F4F6" },
+  availBadge: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  availBadgeOn: { backgroundColor: "#D1FAE5" },
+  availBadgeOff: { backgroundColor: "#FEE2E2" },
+  availDot: { width: 7, height: 7, borderRadius: 4, marginRight: 5 },
+  availText: { fontSize: 12, fontWeight: "700" },
+  // ── Booking Card ──
+  bookingCard: {
+    backgroundColor: "#fff", borderRadius: 16, marginBottom: 12, padding: 16,
+    elevation: 2, shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
+  },
+  bookingTopRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
+  bookingServiceName: { fontSize: 16, fontWeight: "700", color: "#135E4B" },
+  bookingId: { fontSize: 11, color: "#9CA3AF", marginTop: 2 },
+  statusBadge: { flexDirection: "row", alignItems: "center", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, marginLeft: 8 },
+  statusBadgeText: { fontSize: 11, fontWeight: "700", marginLeft: 4 },
+  bookingDivider: { height: 1, backgroundColor: "#F3F4F6", marginVertical: 12 },
+  bookingInfoSection: { gap: 8, marginBottom: 10 },
+  bookingInfoRow: { flexDirection: "row", alignItems: "center" },
+  bookingInfoIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#E8F5EF", alignItems: "center", justifyContent: "center", marginRight: 10 },
+  bookingInfoLabel: { fontSize: 11, color: "#9CA3AF", fontWeight: "500" },
+  bookingInfoValue: { fontSize: 14, color: "#1F2937", fontWeight: "600" },
+  bookingScheduleBox: { backgroundColor: "#F8FBF9", borderRadius: 10, padding: 10, gap: 6, marginBottom: 8 },
+  bookingScheduleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  bookingScheduleText: { fontSize: 13, color: "#374151", fontWeight: "500" },
+  scheduleDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "#D1D5DB" },
+  bookingLocationText: { fontSize: 13, color: "#374151", marginLeft: 6, flex: 1 },
+  notesBox: { flexDirection: "row", alignItems: "flex-start", backgroundColor: "#FEF9C3", padding: 8, borderRadius: 8, marginBottom: 6, gap: 6 },
+  notesText: { fontSize: 12, color: "#78350F", flex: 1 },
+  bookingActionRow: { flexDirection: "row", marginTop: 10 },
+  actionBtn: { flexDirection: "row", padding: 10, borderRadius: 10, justifyContent: "center", alignItems: "center" },
+  actionBtnText: { fontWeight: "700", marginLeft: 6, fontSize: 14 },
   emptyState: { backgroundColor: "#fff", borderRadius: 16, padding: 40, alignItems: "center", margin: 16 },
   emptyTitle: { fontSize: 18, fontWeight: "bold", color: "#333", marginTop: 16 },
   emptyDesc: { fontSize: 14, color: "#666", marginTop: 8, textAlign: "center", paddingHorizontal: 20 },
@@ -677,20 +767,33 @@ const st = StyleSheet.create({
   saveBtnText: { color: "#fff", fontWeight: "bold" },
   // Sidebar
   overlay: { flex: 1, flexDirection: "row" },
-  overlayBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)" },
+  overlayBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
   sidebar: {
     position: "absolute", left: 0, top: 0, bottom: 0, width: SIDEBAR_W,
-    backgroundColor: "#135E4B", paddingVertical: 50, paddingHorizontal: 20,
+    backgroundColor: "#135E4B",
+    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight || 24) + 8 : 54,
     shadowColor: "#000", shadowOffset: { width: 4, height: 0 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 15,
   },
-  sidebarProfile: { alignItems: "center", marginBottom: 40 },
-  avatarCircle: {
-    width: 70, height: 70, borderRadius: 35, backgroundColor: "#4CB572",
-    justifyContent: "center", alignItems: "center", marginBottom: 12, borderWidth: 2, borderColor: "#A8D5BA",
+  sidebarProfile: {
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(168,213,186,0.2)",
+    marginBottom: 4,
   },
-  profileName: { fontSize: 18, fontWeight: "bold", color: "#fff", marginBottom: 4 },
-  profileEmail: { fontSize: 13, color: "#A8D5BA" },
-  sidebarItem: { flexDirection: "row", alignItems: "center", paddingVertical: 14, marginBottom: 8 },
-  sidebarLabel: { fontSize: 16, color: "#fff", marginLeft: 14, fontWeight: "500" },
-  sidebarDivider: { height: 1, backgroundColor: "rgba(168,213,186,0.3)", marginVertical: 20 },
+  avatarCircle: {
+    width: 66, height: 66, borderRadius: 33, backgroundColor: "rgba(76,181,114,0.25)",
+    justifyContent: "center", alignItems: "center", marginBottom: 10,
+    borderWidth: 2, borderColor: "rgba(168,213,186,0.5)",
+  },
+  profileName: { fontSize: 16, fontWeight: "bold", color: "#fff", marginBottom: 2 },
+  profileEmail: { fontSize: 12, color: "#A8D5BA" },
+  sidebarItem: {
+    flexDirection: "row", alignItems: "center",
+    paddingVertical: 11, paddingHorizontal: 16,
+    marginHorizontal: 8, borderRadius: 10, marginTop: 2,
+  },
+  sidebarLabel: { fontSize: 15, color: "#fff", marginLeft: 12, fontWeight: "500" },
+  sidebarDivider: { height: 1, backgroundColor: "rgba(168,213,186,0.2)", marginVertical: 6, marginHorizontal: 16 },
 });
