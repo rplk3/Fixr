@@ -182,6 +182,17 @@ const ProviderDashboardScreen = () => {
     }
   };
 
+  const handleDisplayService = async (serviceId) => {
+    try {
+      const { displayService } = require("../services/serviceApi");
+      await displayService(serviceId);
+      crossAlert("Success", "Service visibility updated.");
+      fetchData();
+    } catch (e) {
+      crossAlert("Error", e.message);
+    }
+  };
+
   const handleSwitchToCustomer = () => {
     setSidebarOpen(false);
     setTimeout(() => {
@@ -262,6 +273,39 @@ const ProviderDashboardScreen = () => {
 
           {/* Description */}
           <Text style={st.serviceDesc} numberOfLines={2}>{item.description}</Text>
+
+          {/* Status Badges & Action Buttons */}
+          <View style={{ marginTop: 10, marginBottom: 4, gap: 8 }}>
+            {item.status === 'pending' && (
+              <View style={[st.statusBadge, { backgroundColor: '#FEF3C7', alignSelf: 'flex-start' }]}>
+                <Ionicons name="time-outline" size={14} color="#B45309" />
+                <Text style={[st.statusBadgeText, { color: '#B45309' }]}>Waiting for Admin Approval</Text>
+              </View>
+            )}
+            {item.status === 'rejected' && (
+              <View style={{ gap: 6 }}>
+                <View style={[st.statusBadge, { backgroundColor: '#FEE2E2', alignSelf: 'flex-start' }]}>
+                  <Ionicons name="close-circle-outline" size={14} color="#991B1B" />
+                  <Text style={[st.statusBadgeText, { color: '#991B1B' }]}>Update Rejected</Text>
+                </View>
+                <Text style={{ fontSize: 12, color: '#991B1B', fontStyle: 'italic', marginBottom: 4 }}>Reason: {item.rejectionReason}</Text>
+                <TouchableOpacity style={st.displayActionBtn} onPress={() => handleDisplayService(item._id)}>
+                  <Text style={st.displayActionBtnText}>Display Old Service</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {item.status === 'approved' && item.approvalActionRequired && (
+              <View style={{ gap: 6 }}>
+                <View style={[st.statusBadge, { backgroundColor: '#DBEAFE', alignSelf: 'flex-start' }]}>
+                  <Ionicons name="checkmark-done-outline" size={14} color="#1E40AF" />
+                  <Text style={[st.statusBadgeText, { color: '#1E40AF' }]}>Approved (Hidden)</Text>
+                </View>
+                <TouchableOpacity style={st.displayActionBtn} onPress={() => handleDisplayService(item._id)}>
+                  <Text style={st.displayActionBtnText}>Approval received - Display now</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
 
           {/* Availability toggle */}
           <View style={st.availabilityRow}>
@@ -682,11 +726,21 @@ const st = StyleSheet.create({
   serviceTitle: { fontSize: 16, fontWeight: "700", color: "#135E4B", flex: 1 },
   serviceDesc: { fontSize: 12, color: "#9CA3AF", marginTop: 6, lineHeight: 18 },
   editBtn: { padding: 7, backgroundColor: "#EBF5FF", borderRadius: 8 },
-  deleteBtn: { padding: 7, backgroundColor: "#FEE2E2", borderRadius: 8 },
-  categoryChip: {
-    flexDirection: "row", alignItems: "center", alignSelf: "flex-start",
-    backgroundColor: "#E8F5EF", borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3, marginTop: 6,
+  deleteBtn: { backgroundColor: "#FEE2E2", padding: 6, borderRadius: 8 },
+  displayActionBtn: {
+    backgroundColor: "#135E4B",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 4,
   },
+  displayActionBtnText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  categoryChip: { flexDirection: "row", alignItems: "center", backgroundColor: "#E8F5EF", alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginBottom: 8 },
   categoryChipText: { fontSize: 11, color: "#135E4B", fontWeight: "600", marginLeft: 3 },
   priceRow: { flexDirection: "row", alignItems: "baseline", marginTop: 8 },
   priceLabel: { fontSize: 13, color: "#4CB572", fontWeight: "600" },

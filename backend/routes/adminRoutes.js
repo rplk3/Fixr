@@ -7,6 +7,9 @@ const {
   getAllServices,
   deleteService,
   updateService,
+  getPendingServices,
+  approveServiceUpdate,
+  rejectServiceUpdate,
   getAllBookings,
   getBookingById,
   updateBookingStatus,
@@ -30,6 +33,9 @@ router.use(protect, adminOnly);
 router.get("/dashboard", getDashboardStats);
 
 // Services (Category Management)
+router.get("/services/pending", getPendingServices);
+router.patch("/services/:id/approve", approveServiceUpdate);
+router.patch("/services/:id/reject", rejectServiceUpdate);
 router.get("/services", getAllServices);
 router.put("/services/:id", updateService);
 router.delete("/services/:id", deleteService);

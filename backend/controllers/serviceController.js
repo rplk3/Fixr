@@ -6,7 +6,11 @@ const { updateMany } = require("../models/User");
 // @access  Public
 const getServices = async (req, res) => {
   try {
-    const services = await Service.find({ availability: true });
+    const services = await Service.find({ 
+      availability: true, 
+      status: "approved", 
+      visibilityStatus: "visible" 
+    });
     res.status(200).json(services);
   } catch (error) {
     res.status(500).json({
@@ -66,6 +70,9 @@ const createService = async (req, res) => {
       availability,
       image,
       provider: providerId,
+      status: "pending",
+      visibilityStatus: "disabled",
+      approvalActionRequired: false,
     });
 
     res.status(201).json(service);
@@ -126,9 +133,30 @@ const updateService = async (req, res) => {
       });
     }
 
+    const { title, description, category, price, location, availability, image } = req.body;
+    
+    // Instead of overwriting main fields, we save them to pendingEdits
+    const pendingEdits = {
+      ...(title && { title }),
+      ...(description && { description }),
+      ...(category && { category }),
+      ...(price !== undefined && { price }),
+      ...(location && { location }),
+      ...(availability !== undefined && { availability }),
+      ...(image && { image }),
+    };
+
     const updatedService = await Service.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      {
+        $set: {
+          pendingEdits,
+          status: "pending",
+          visibilityStatus: "disabled",
+          approvalActionRequired: false,
+          rejectionReason: "",
+        }
+      },
       {
         new: true,
         runValidators: true,
@@ -139,6 +167,46 @@ const updateService = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to update service",
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Display approved service or revert rejected service
+// @route   PATCH /api/services/:id/display
+// @access  Private
+const displayService = async (req, res) => {
+  try {
+    const service = await Service.findById(req.params.id);
+
+    if (!service) {
+      return res.status(404).json({ message: "Service not found" });
+    }
+
+    const loggedInUserId = req.user._id || req.user.id;
+    if (service.provider.toString() !== loggedInUserId.toString()) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    if (service.status === "approved" && service.approvalActionRequired) {
+      // Admin approved the update, now provider displays it
+      service.visibilityStatus = "visible";
+      service.approvalActionRequired = false;
+    } else if (service.status === "rejected") {
+      // Revert to old service
+      service.status = "approved";
+      service.visibilityStatus = "visible";
+      service.pendingEdits = null;
+      service.rejectionReason = "";
+    } else {
+      return res.status(400).json({ message: "Service cannot be displayed in its current state" });
+    }
+
+    await service.save();
+    res.status(200).json(service);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to display service",
       error: error.message,
     });
   }
@@ -190,4 +258,5 @@ module.exports = {
   getServiceById,
   updateService,
   deleteService,
+  displayService,
 };

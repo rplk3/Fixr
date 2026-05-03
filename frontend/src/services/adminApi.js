@@ -41,6 +41,34 @@ export const updateAdminService = async (id, payload) => {
   return data;
 };
 
+export const getPendingServices = async () => {
+  const res = await fetch(`${BASE_URL}/admin/services/pending`, { headers: authHeaders() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to fetch pending services");
+  return data;
+};
+
+export const approveServiceUpdate = async (id) => {
+  const res = await fetch(`${BASE_URL}/admin/services/${id}/approve`, {
+    method: "PATCH",
+    headers: authHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to approve service");
+  return data;
+};
+
+export const rejectServiceUpdate = async (id, reason) => {
+  const res = await fetch(`${BASE_URL}/admin/services/${id}/reject`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify({ reason }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to reject service");
+  return data;
+};
+
 // Bookings
 export const getAdminBookings = async () => {
   const res = await fetch(`${BASE_URL}/admin/bookings`, { headers: authHeaders() });

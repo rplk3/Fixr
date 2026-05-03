@@ -76,3 +76,16 @@ export const deleteService = async (id) => {
   if (!response.ok) throw new Error(data.message || "Failed to delete service");
   return data;
 };
+
+export const displayService = async (id) => {
+  const response = await fetch(`${BASE_URL}/services/${id}/display`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getToken()}`,
+    },
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to display service");
+  return data;
+};

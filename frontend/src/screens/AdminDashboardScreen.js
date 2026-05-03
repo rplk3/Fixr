@@ -9,7 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   getAdminDashboard, getAdminServices, deleteAdminService, updateAdminService,
   getAdminBookings, getAdminProviders, updateProviderStatus, deleteAdminProvider,
-  getAdminPayments, getAdminReviews, deleteAdminReview,
+  getAdminPayments, getAdminReviews, deleteAdminReview, getPendingServices, approveServiceUpdate, rejectServiceUpdate,
 } from "../services/adminApi";
 import { getAdminComplaints } from "../services/complaintApi";
 import { setToken, setUser } from "../services/authApi";
@@ -95,6 +95,7 @@ const AdminDashboardScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({});
   const [services, setServices] = useState([]);
+  const [pendingServices, setPendingServices] = useState([]);
   const [categories, setCategories] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [providers, setProviders] = useState([]);
@@ -121,12 +122,18 @@ const AdminDashboardScreen = ({ navigation }) => {
   const [svcPrice, setSvcPrice] = useState("");
   const [svcLocation, setSvcLocation] = useState("");
 
+  // Rejection Modal
+  const [rejModalOpen, setRejModalOpen] = useState(false);
+  const [rejSvcId, setRejSvcId] = useState(null);
+  const [rejReason, setRejReason] = useState("");
+
   const load = useCallback(async (p) => {
     setLoading(true);
     try {
       if (p === "dashboard") setStats(await getAdminDashboard());
       else if (p === "services") {
         setServices(await getAdminServices());
+        setPendingServices(await getPendingServices());
         setCategories(await getCategories());
       }
       else if (p === "bookings") setBookings(await getAdminBookings());
@@ -200,6 +207,28 @@ const AdminDashboardScreen = ({ navigation }) => {
     }
   };
 
+  const handleApproveService = async (id) => {
+    try {
+      await approveServiceUpdate(id);
+      crossAlert("Success", "Service update approved");
+      load("services");
+    } catch (e) {
+      crossAlert("Error", e.message);
+    }
+  };
+
+  const submitRejection = async () => {
+    if (!rejReason.trim()) return crossAlert("Error", "Please provide a reason");
+    try {
+      await rejectServiceUpdate(rejSvcId, rejReason.trim());
+      setRejModalOpen(false);
+      crossAlert("Success", "Service update rejected");
+      load("services");
+    } catch (e) {
+      crossAlert("Error", e.message);
+    }
+  };
+
   const handleProviderAction = async (id, status) => {
     try { await updateProviderStatus(id, status); load("providers"); }
     catch (e) { crossAlert("Error", e.message); }
@@ -254,6 +283,9 @@ const AdminDashboardScreen = ({ navigation }) => {
               <TouchableOpacity onPress={() => setServiceTab("services")} style={[s.subTab, serviceTab === "services" && s.subTabActive]}>
                 <Text style={[s.subTabText, serviceTab === "services" && s.subTabTextActive]}>All Services</Text>
               </TouchableOpacity>
+              <TouchableOpacity onPress={() => setServiceTab("pending")} style={[s.subTab, serviceTab === "pending" && s.subTabActive]}>
+                <Text style={[s.subTabText, serviceTab === "pending" && s.subTabTextActive]}>Pending</Text>
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => setServiceTab("categories")} style={[s.subTab, serviceTab === "categories" && s.subTabActive]}>
                 <Text style={[s.subTabText, serviceTab === "categories" && s.subTabTextActive]}>Categories</Text>
               </TouchableOpacity>
@@ -273,6 +305,29 @@ const AdminDashboardScreen = ({ navigation }) => {
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => handleDeleteService(item._id)} style={s.delBtn}>
                       <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              />
+            ) : serviceTab === "pending" ? (
+              <ListPage data={pendingServices} loading={loading} onRefresh={() => load("services")} emptyMsg="No pending updates"
+                renderItem={({ item }) => (
+                  <View style={s.listItem}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.listTitle}>{item.pendingEdits?.title || item.title}</Text>
+                      <Text style={s.listSub}>Original: {item.title}</Text>
+                      {item.pendingEdits && (
+                        <Text style={{ fontSize: 12, color: "#D97706", marginTop: 4 }}>
+                          Proposed Changes: {Object.keys(item.pendingEdits).join(", ")}
+                        </Text>
+                      )}
+                      <Text style={[s.listSub, { marginTop: 4 }]}>Provider ID: {item.provider?.firstName || item.provider}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => handleApproveService(item._id)} style={[s.editBtn, { backgroundColor: "#D1FAE5" }]}>
+                      <Ionicons name="checkmark-outline" size={20} color="#059669" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => { setRejSvcId(item._id); setRejReason(""); setRejModalOpen(true); }} style={s.delBtn}>
+                      <Ionicons name="close-outline" size={20} color="#EF4444" />
                     </TouchableOpacity>
                   </View>
                 )}
@@ -643,6 +698,31 @@ const AdminDashboardScreen = ({ navigation }) => {
               </View>
             </View>
           </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Rejection Modal */}
+      <Modal visible={rejModalOpen} transparent animationType="fade" onRequestClose={() => setRejModalOpen(false)}>
+        <View style={s.modalOverlay}>
+          <View style={s.modalBox}>
+            <Text style={s.modalTitle}>Reject Update</Text>
+            <Text style={s.fieldLabel}>Rejection Reason</Text>
+            <TextInput 
+              style={[s.modalInput, { minHeight: 70, textAlignVertical: "top" }]} 
+              placeholder="Why is this update rejected?" 
+              value={rejReason} 
+              onChangeText={setRejReason} 
+              multiline 
+            />
+            <View style={s.modalActions}>
+              <TouchableOpacity onPress={() => setRejModalOpen(false)} style={[s.modalBtn, { backgroundColor: "#ccc" }]}>
+                <Text style={s.modalBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={submitRejection} style={[s.modalBtn, { backgroundColor: "#EF4444" }]}>
+                <Text style={s.modalBtnText}>Reject</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </Modal>
     </SafeAreaView>

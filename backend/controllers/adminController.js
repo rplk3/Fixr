@@ -70,6 +70,55 @@ exports.getAllServices = async (req, res) => {
   }
 };
 
+exports.getPendingServices = async (req, res) => {
+  try {
+    const services = await safeFind(Service, { status: "pending" }, { path: "provider", select: "firstName lastName email" }, { createdAt: -1 });
+    res.status(200).json(services);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.approveServiceUpdate = async (req, res) => {
+  try {
+    const service = await Service.findById(req.params.id);
+    if (!service) return res.status(404).json({ message: "Service not found" });
+
+    if (service.pendingEdits) {
+      Object.assign(service, service.pendingEdits);
+      service.pendingEdits = null;
+    }
+    
+    service.status = "approved";
+    service.visibilityStatus = "disabled";
+    service.approvalActionRequired = true;
+    service.rejectionReason = "";
+
+    await service.save();
+    res.status(200).json(service);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.rejectServiceUpdate = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const service = await Service.findById(req.params.id);
+    if (!service) return res.status(404).json({ message: "Service not found" });
+
+    service.status = "rejected";
+    service.visibilityStatus = "disabled";
+    service.approvalActionRequired = false;
+    service.rejectionReason = reason || "No reason provided";
+
+    await service.save();
+    res.status(200).json(service);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 exports.deleteService = async (req, res) => {
   try {
     const service = await Service.findByIdAndDelete(req.params.id);

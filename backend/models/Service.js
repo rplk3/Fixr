@@ -40,6 +40,28 @@ const serviceSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    visibilityStatus: {
+      type: String,
+      enum: ["visible", "hidden", "disabled"],
+      default: "disabled",
+    },
+    approvalActionRequired: {
+      type: Boolean,
+      default: false,
+    },
+    rejectionReason: {
+      type: String,
+      default: "",
+    },
+    pendingEdits: {
+      type: Object,
+      default: null,
+    },
   },
   {
     timestamps: true,
