@@ -8,7 +8,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { crossAlert } from "../utils/alert";
-import { getMyServices, updateService, deleteService, createService } from "../services/serviceApi";
+import { getMyServices, updateService, deleteService, createService, displayService } from "../services/serviceApi";
 import { getProviderBookings, updateBookingStatus } from "../services/bookingApi";
 import { getCategories } from "../services/categoryApi";
 import { getUser, setToken, setUser } from "../services/authApi";
@@ -184,7 +184,6 @@ const ProviderDashboardScreen = () => {
 
   const handleDisplayService = async (serviceId) => {
     try {
-      const { displayService } = require("../services/serviceApi");
       await displayService(serviceId);
       crossAlert("Success", "Service visibility updated.");
       fetchData();
