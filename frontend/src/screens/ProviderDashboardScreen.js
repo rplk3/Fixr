@@ -300,7 +300,7 @@ const ProviderDashboardScreen = () => {
         <View style={st.bookingTopRow}>
           <View style={{ flex: 1 }}>
             <Text style={st.bookingServiceName} numberOfLines={1}>{item.service?.title || "Service"}</Text>
-            <Text style={st.bookingId}>#{item._id?.slice(-6).toUpperCase()}</Text>
+            <Text style={st.bookingId}>#{item._id?.slice(-6)?.toUpperCase()}</Text>
           </View>
           <View style={[st.statusBadge, { backgroundColor: cfg.bg }]}>
             <Ionicons name={cfg.icon} size={12} color={cfg.color} />

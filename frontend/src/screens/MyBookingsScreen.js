@@ -92,7 +92,7 @@ const MyBookingsScreen = () => {
         <View style={s.cardTopRow}>
           <View style={{ flex: 1 }}>
             <Text style={s.serviceTitle} numberOfLines={1}>{item.service?.title || "Service"}</Text>
-            <Text style={s.bookingId}>#{item._id?.slice(-6).toUpperCase()}</Text>
+            <Text style={s.bookingId}>#{item._id?.slice(-6)?.toUpperCase()}</Text>
           </View>
           <View style={[s.statusBadge, { backgroundColor: cfg.bg }]}>
             <Ionicons name={cfg.icon} size={12} color={cfg.color} />
