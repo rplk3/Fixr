@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, TextInput, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, ActivityIndicator } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { Ionicons } from "@expo/vector-icons";
 import { createAdminUser } from "../services/adminApi";
 import { crossAlert } from "../utils/alert";
@@ -88,7 +89,7 @@ const AdminCreateUserScreen = ({ navigation }) => {
         <View style={{ width: 32 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAwareScrollView contentContainerStyle={styles.content} enableOnAndroid={true} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.formCard}>
           <Text style={styles.sectionTitle}>Basic Information</Text>
           
@@ -167,7 +168,7 @@ const AdminCreateUserScreen = ({ navigation }) => {
         </TouchableOpacity>
         
         <View style={{ height: 40 }} />
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 };

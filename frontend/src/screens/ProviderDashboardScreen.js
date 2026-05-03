@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image,
   FlatList, ActivityIndicator, Modal, TextInput, RefreshControl, ScrollView, Switch, Dimensions
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -434,7 +435,7 @@ const ProviderDashboardScreen = () => {
       {/* Add/Edit Modal */}
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
         <View style={st.modalOverlay}>
-          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}>
+          <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }} enableOnAndroid={true} keyboardShouldPersistTaps="handled">
             <View style={st.modalCard}>
               <Text style={st.modalTitle}>{modalMode === "edit" ? "Edit Service" : "Add New Service"}</Text>
 
@@ -483,7 +484,7 @@ const ProviderDashboardScreen = () => {
                 </TouchableOpacity>
               </View>
             </View>
-          </ScrollView>
+          </KeyboardAwareScrollView>
         </View>
       </Modal>
 

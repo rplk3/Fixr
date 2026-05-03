@@ -199,24 +199,24 @@ const ServiceDetailsScreen = () => {
               ))}
             </View>
           )}
+          {/* ── Scrollable Footer ── */}
+          <View style={styles.scrollFooter}>
+            <View style={styles.footerPrice}>
+              <Text style={styles.footerPriceLabel}>Total</Text>
+              <Text style={styles.footerPriceValue}>Rs. {service.price?.toLocaleString()}</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.bookBtn}
+              onPress={() => navigation.navigate("Booking", { service })}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="calendar-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
+              <Text style={styles.bookBtnText}>Book Now</Text>
+            </TouchableOpacity>
+          </View>
+
         </View>
       </ScrollView>
-
-      {/* ── Sticky Book Now Button ── */}
-      <View style={styles.stickyFooter}>
-        <View style={styles.footerPrice}>
-          <Text style={styles.footerPriceLabel}>Total</Text>
-          <Text style={styles.footerPriceValue}>Rs. {service.price?.toLocaleString()}</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.bookBtn}
-          onPress={() => navigation.navigate("Booking", { service })}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="calendar-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
-          <Text style={styles.bookBtnText}>Book Now</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 };
@@ -518,25 +518,17 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // ── Sticky Footer ──
-  stickyFooter: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
+  // ── Scrollable Footer ──
+  scrollFooter: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#fff",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 10,
+    backgroundColor: "#F9FAFB",
+    padding: 16,
+    borderRadius: 16,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
   },
   footerPrice: {
     gap: 2,

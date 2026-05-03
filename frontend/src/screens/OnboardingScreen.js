@@ -9,11 +9,11 @@ import {
   Switch,
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Platform,
   Modal,
   FlatList,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { applyProvider } from "../services/authApi";
 import { getCategories } from "../services/categoryApi";
 import { Ionicons } from "@expo/vector-icons";
@@ -76,11 +76,14 @@ const OnboardingScreen = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
+    <>
+    <KeyboardAwareScrollView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      enableOnAndroid={true}
+      keyboardShouldPersistTaps="handled"
     >
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.greeting}>Become a Provider</Text>
           <Text style={styles.subText}>Tell us what services you offer</Text>
@@ -171,8 +174,7 @@ const OnboardingScreen = ({ navigation }) => {
             )}
           </TouchableOpacity>
         </View>
-      </ScrollView>
-
+    </KeyboardAwareScrollView>
       {/* Category Modal */}
       <Modal visible={catModalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -203,7 +205,7 @@ const OnboardingScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </>
   );
 };
 

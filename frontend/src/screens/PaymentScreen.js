@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from "react";
 import {
-  View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform
+  TextInput, TouchableOpacity, ActivityIndicator, Platform
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { crossAlert } from "../utils/alert";
@@ -142,8 +142,13 @@ const PaymentScreen = () => {
         <View style={{ width: 30 }} />
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView contentContainerStyle={s.scroll}>
+      <KeyboardAwareScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={s.scroll}
+        showsVerticalScrollIndicator={false}
+        enableOnAndroid={true}
+        keyboardShouldPersistTaps="handled"
+      >
           {/* Booking Summary */}
           <View style={s.summaryCard}>
             <Text style={s.summaryTitle}>Booking Summary</Text>
@@ -264,8 +269,7 @@ const PaymentScreen = () => {
               </>
             )}
           </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 };

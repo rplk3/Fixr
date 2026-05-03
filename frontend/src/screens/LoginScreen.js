@@ -7,10 +7,9 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
-  ScrollView,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { loginUser } from "../services/authApi";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -59,11 +58,13 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAwareScrollView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      enableOnAndroid={true}
+      keyboardShouldPersistTaps="handled"
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.logo}>Fixr</Text>
         <Text style={styles.subtitle}>Welcome back</Text>
 
@@ -120,8 +121,7 @@ const LoginScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 };
 

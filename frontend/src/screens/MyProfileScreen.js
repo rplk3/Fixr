@@ -8,10 +8,9 @@ import {
   SafeAreaView,
   Image,
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
-  ScrollView,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { getUser, updateProfile, uploadImage } from "../services/authApi";
@@ -104,19 +103,20 @@ const MyProfileScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={24} color="#135E4B" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>My Profile</Text>
+        <View style={{ width: 24 }} />
+      </View>
+      <KeyboardAwareScrollView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        enableOnAndroid={true}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#135E4B" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Profile</Text>
-          <View style={{ width: 24 }} />
-        </View>
-
-        <ScrollView contentContainerStyle={styles.content}>
           {/* Profile Image */}
           <View style={styles.imageContainer}>
             <TouchableOpacity onPress={pickImage} style={styles.imagePicker} disabled={!editing}>
@@ -210,8 +210,7 @@ const MyProfileScreen = ({ navigation }) => {
               </TouchableOpacity>
             )}
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 };

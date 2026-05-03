@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity,
   TextInput, ActivityIndicator, RefreshControl, Modal, Dimensions
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { Ionicons } from "@expo/vector-icons";
 import { crossAlert } from "../utils/alert";
 import { createComplaint, getMyComplaints } from "../services/complaintApi";
@@ -112,7 +113,7 @@ const ComplaintsScreen = ({ navigation }) => {
       {/* New Complaint Modal */}
       <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
         <View style={styles.modalOverlay}>
-          <ScrollView contentContainerStyle={styles.modalScroll}>
+          <KeyboardAwareScrollView contentContainerStyle={styles.modalScroll} enableOnAndroid={true} keyboardShouldPersistTaps="handled">
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Submit Complaint</Text>
@@ -152,7 +153,7 @@ const ComplaintsScreen = ({ navigation }) => {
                 {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>Submit Complaint</Text>}
               </TouchableOpacity>
             </View>
-          </ScrollView>
+          </KeyboardAwareScrollView>
         </View>
       </Modal>
     </SafeAreaView>

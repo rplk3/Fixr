@@ -7,10 +7,9 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
-  ScrollView,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { registerUser } from "../services/authApi";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -82,11 +81,13 @@ const SignUpScreen = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAwareScrollView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      enableOnAndroid={true}
+      keyboardShouldPersistTaps="handled"
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.logo}>Fixr</Text>
         <Text style={styles.subtitle}>Create your account</Text>
 
@@ -199,8 +200,7 @@ const SignUpScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 };
 
