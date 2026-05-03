@@ -293,7 +293,7 @@ const ProviderDashboardScreen = () => {
   };
 
   const renderBooking = ({ item }) => {
-    const cfg = statusConfig[item.status] || { label: item.status.toUpperCase(), bg: "#F3F4F6", color: "#374151", icon: "ellipse-outline" };
+    const cfg = statusConfig[item.status] || { label: item.status?.toUpperCase() || "UNKNOWN", bg: "#F3F4F6", color: "#374151", icon: "ellipse-outline" };
     return (
       <View style={st.bookingCard}>
         {/* Top: service name + status badge */}

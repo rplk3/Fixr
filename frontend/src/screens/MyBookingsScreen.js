@@ -85,7 +85,7 @@ const MyBookingsScreen = () => {
   };
 
   const renderItem = ({ item }) => {
-    const cfg = statusConfig[item.status] || { label: item.status.toUpperCase(), bg: "#F3F4F6", color: "#374151", icon: "ellipse-outline" };
+    const cfg = statusConfig[item.status] || { label: item.status?.toUpperCase() || "UNKNOWN", bg: "#F3F4F6", color: "#374151", icon: "ellipse-outline" };
     return (
       <View style={s.card}>
         {/* Top row: service name + status */}
