@@ -11,6 +11,7 @@ import { getMyServices, updateService, deleteService, createService } from "../s
 import { getProviderBookings, updateBookingStatus } from "../services/bookingApi";
 import { getCategories } from "../services/categoryApi";
 import { getUser, setToken, setUser } from "../services/authApi";
+import { IMAGE_BASE_URL } from "../config/api";
 
 const { width } = Dimensions.get("window");
 const SIDEBAR_W = width * 0.72;
@@ -495,7 +496,7 @@ const ProviderDashboardScreen = () => {
             <View style={st.sidebarProfile}>
               <View style={st.avatarCircle}>
                 {user?.profileImage ? (
-                  <Image source={{ uri: user.profileImage.startsWith('/uploads') ? `http://192.168.8.102:5000${user.profileImage}` : user.profileImage }} style={{ width: 64, height: 64, borderRadius: 32 }} />
+                  <Image source={{ uri: user.profileImage.startsWith('/uploads') ? `${IMAGE_BASE_URL}${user.profileImage}` : user.profileImage }} style={{ width: 64, height: 64, borderRadius: 32 }} />
                 ) : (
                   <Ionicons name="person" size={36} color="#fff" />
                 )}

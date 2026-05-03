@@ -1,6 +1,6 @@
 import { getToken } from "./authApi";
 
-const BASE_URL = "http://192.168.8.102:5000/api";
+import { API_BASE_URL as BASE_URL } from "../config/api";
 
 const authHeaders = () => ({
   "Content-Type": "application/json",

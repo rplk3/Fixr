@@ -17,7 +17,7 @@ import * as ImagePicker from "expo-image-picker";
 import { getUser, updateProfile, uploadImage } from "../services/authApi";
 import { crossAlert } from "../utils/alert";
 
-const API_SERVER = "http://192.168.8.102:5000";
+import { IMAGE_BASE_URL as API_SERVER } from "../config/api";
 
 const MyProfileScreen = ({ navigation }) => {
   const [user, setLocalUser] = useState(null);

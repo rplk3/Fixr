@@ -1,4 +1,4 @@
-const BASE_URL = "http://192.168.8.102:5000/api";
+import { API_BASE_URL as BASE_URL, IMAGE_BASE_URL } from "../config/api";
 
 // In-memory token storage
 let authToken = null;

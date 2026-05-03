@@ -9,6 +9,7 @@ import ServiceCard from "../components/ServiceCard";
 import { getAllServices } from "../services/serviceApi";
 import { getUser, setToken, setUser } from "../services/authApi";
 import { Ionicons } from "@expo/vector-icons";
+import { IMAGE_BASE_URL } from "../config/api";
 
 const { width } = Dimensions.get("window");
 const SIDEBAR_W = width * 0.72;
@@ -163,7 +164,7 @@ const ServicesListScreen = () => {
             <View style={styles.sidebarProfile}>
               <View style={styles.avatarCircle}>
                 {user?.profileImage ? (
-                  <Image source={{ uri: user.profileImage.startsWith('/uploads') ? `http://192.168.8.102:5000${user.profileImage}` : user.profileImage }} style={{ width: 64, height: 64, borderRadius: 32 }} />
+                  <Image source={{ uri: user.profileImage.startsWith('/uploads') ? `${IMAGE_BASE_URL}${user.profileImage}` : user.profileImage }} style={{ width: 64, height: 64, borderRadius: 32 }} />
                 ) : (
                   <Ionicons name="person" size={36} color="#fff" />
                 )}
