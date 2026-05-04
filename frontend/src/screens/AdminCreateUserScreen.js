@@ -1,39 +1,126 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, ActivityIndicator } from "react-native";
+import React, { useState, useMemo } from "react";
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, ActivityIndicator, Dimensions } from "react-native";
 import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import { Ionicons } from "@expo/vector-icons";
 import { createAdminUser } from "../services/adminApi";
 import { crossAlert } from "../utils/alert";
 
+const { width } = Dimensions.get("window");
+
+// ── Reusable Components (outside to prevent re-mount) ──────
+const InputField = ({ label, icon, value, onChangeText, onBlur, error, isTouched, placeholder, keyboardType, secureTextEntry, maxLength, rightIcon }) => (
+  <View style={{ marginBottom: 16 }}>
+    <Text style={st.fieldLabel}>{label}</Text>
+    <View style={[st.inputWrapper, isTouched && error ? st.inputWrapperError : null]}>
+      <Ionicons name={icon} size={18} color={isTouched && error ? "#EF4444" : "#94A3B8"} style={{ marginRight: 10 }} />
+      <TextInput
+        style={st.inputInner}
+        value={value}
+        onChangeText={onChangeText}
+        onBlur={onBlur}
+        placeholder={placeholder}
+        placeholderTextColor="#CBD5E1"
+        keyboardType={keyboardType}
+        secureTextEntry={secureTextEntry}
+        maxLength={maxLength}
+        autoCapitalize="none"
+      />
+      {rightIcon || null}
+    </View>
+    {isTouched && error ? <Text style={st.errorText}>{error}</Text> : null}
+  </View>
+);
+
+const RoleChip = ({ label, value, icon, selected, onToggle }) => (
+  <TouchableOpacity style={[st.chipBtn, selected && st.chipBtnActive]} onPress={() => onToggle(value)} activeOpacity={0.7}>
+    <Ionicons name={icon} size={16} color={selected ? "#fff" : "#64748B"} />
+    <Text style={[st.chipBtnText, selected && st.chipBtnTextActive]}>{label}</Text>
+  </TouchableOpacity>
+);
+
+const RadioPill = ({ label, value, selectedValue, onSelect, color }) => (
+  <TouchableOpacity
+    style={[st.radioPill, selectedValue === value && { backgroundColor: color + "15", borderColor: color }]}
+    onPress={() => onSelect(value)}
+    activeOpacity={0.7}
+  >
+    <View style={[st.radioDot, selectedValue === value && { backgroundColor: color, borderColor: color }]} />
+    <Text style={[st.radioPillText, selectedValue === value && { color }]}>{label}</Text>
+  </TouchableOpacity>
+);
+
 const AdminCreateUserScreen = ({ navigation }) => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState("+94");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [roles, setRoles] = useState(["customer"]);
   const [providerStatus, setProviderStatus] = useState("none");
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
 
-  const validate = () => {
-    const newErrors = {};
-    if (!firstName.trim()) newErrors.firstName = "First name is required";
-    if (!lastName.trim()) newErrors.lastName = "Last name is required";
-    if (!email.trim()) newErrors.email = "Email is required";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) newErrors.email = "Invalid email format";
-    if (!password) newErrors.password = "Password is required";
-    else if (password.length < 6) newErrors.password = "Password must be at least 6 characters";
-    if (phone && phone.trim().length < 9) newErrors.phone = "Invalid phone number";
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  // ── Input Formatters ─────────────────────────────────────
+  const handleFirstName = (t) => {
+    // Only allow letters and spaces
+    setFirstName(t.replace(/[^a-zA-Z\s]/g, ""));
   };
 
+  const handleLastName = (t) => {
+    // Only allow letters and spaces
+    setLastName(t.replace(/[^a-zA-Z\s]/g, ""));
+  };
+
+  const handlePhone = (displayText) => {
+    // Strip the display space: "+94 " -> "+94"
+    const raw = displayText.replace(/\s/g, "");
+    if (!raw.startsWith("+94")) return;
+    const afterPrefix = raw.slice(3).replace(/[^0-9]/g, "").slice(0, 9);
+    setPhone("+94" + afterPrefix);
+  };
+
+  // Display phone with space after +94
+  const displayPhone = phone.length > 3 ? "+94 " + phone.slice(3) : phone;
+
+  // ── Validation ───────────────────────────────────────────
+  const errors = useMemo(() => {
+    const e = {};
+
+    if (!firstName.trim()) e.firstName = "First name is required.";
+    else if (firstName.trim().length < 2) e.firstName = "Must be at least 2 characters.";
+
+    if (!lastName.trim()) e.lastName = "Last name is required.";
+    else if (lastName.trim().length < 2) e.lastName = "Must be at least 2 characters.";
+
+    if (!email.trim()) e.email = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) e.email = "Invalid email format.";
+
+    // Phone: if digits entered, must be exactly 9
+    if (phone.length > 3) {
+      const digits = phone.slice(3).replace(/\s/g, "");
+      if (digits.length < 9) e.phone = "Enter 9 digits after +94.";
+    }
+
+    if (!password) e.password = "Password is required.";
+    else if (password.length < 6) e.password = "Must be at least 6 characters.";
+
+    return e;
+  }, [firstName, lastName, email, phone, password]);
+
+  const isValid = Object.keys(errors).length === 0;
+  const markTouched = (field) => setTouched((t) => ({ ...t, [field]: true }));
+
   const handleCreate = async () => {
-    if (!validate()) return;
-    
+    // Mark all fields touched
+    setTouched({ firstName: true, lastName: true, email: true, phone: true, password: true });
+
+    if (!isValid) {
+      crossAlert("Validation Error", "Please fix the highlighted errors.");
+      return;
+    }
+
     try {
       setLoading(true);
       await createAdminUser({
@@ -46,8 +133,9 @@ const AdminCreateUserScreen = ({ navigation }) => {
         providerStatus,
         isActive
       });
-      crossAlert("Success", "User created successfully");
-      navigation.goBack();
+      crossAlert("Success", "User created successfully!", [
+        { text: "OK", onPress: () => navigation.goBack() }
+      ]);
     } catch (e) {
       crossAlert("Error", e.message);
     } finally {
@@ -63,110 +151,139 @@ const AdminCreateUserScreen = ({ navigation }) => {
     }
   };
 
-  const Checkbox = ({ label, value, selectedValue, onToggle }) => (
-    <TouchableOpacity style={styles.radioOption} onPress={() => onToggle(value)}>
-      <View style={[styles.checkboxSquare, selectedValue.includes(value) && styles.checkboxSquareSelected]}>
-        {selectedValue.includes(value) && <Ionicons name="checkmark" size={14} color="#fff" />}
-      </View>
-      <Text style={styles.radioLabel}>{label}</Text>
-    </TouchableOpacity>
-  );
-
-  const RadioOption = ({ label, value, selectedValue, onSelect }) => (
-    <TouchableOpacity style={styles.radioOption} onPress={() => onSelect(value)}>
-      <View style={[styles.radioCircle, selectedValue === value && styles.radioCircleSelected]} />
-      <Text style={styles.radioLabel}>{label}</Text>
-    </TouchableOpacity>
-  );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+    <SafeAreaView style={st.container}>
+      {/* Header */}
+      <View style={st.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create New User</Text>
-        <View style={{ width: 32 }} />
+        <View style={{ flex: 1 }}>
+          <Text style={st.headerTitle}>Create New User</Text>
+          <Text style={st.headerSub}>Add a new user to the system</Text>
+        </View>
       </View>
 
-      <KeyboardAwareScrollView contentContainerStyle={styles.content} enableOnAndroid={true} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <View style={styles.formCard}>
-          <Text style={styles.sectionTitle}>Basic Information</Text>
-          
-          <Text style={styles.label}>First Name *</Text>
-          <TextInput
-            style={[styles.input, errors.firstName && styles.inputError]}
+      <KeyboardAwareScrollView contentContainerStyle={st.content} enableOnAndroid={true} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        {/* Basic Information Card */}
+        <View style={st.card}>
+          <View style={st.cardHeader}>
+            <View style={st.cardIconWrap}>
+              <Ionicons name="person-outline" size={18} color="#135E4B" />
+            </View>
+            <Text style={st.cardTitle}>Basic Information</Text>
+          </View>
+
+          <InputField
+            label="First Name *"
+            icon="person-outline"
             value={firstName}
-            onChangeText={t => { setFirstName(t); setErrors(e => ({...e, firstName: null})) }}
+            onChangeText={handleFirstName}
+            onBlur={() => markTouched("firstName")}
+            error={errors.firstName}
+            isTouched={touched.firstName}
+            placeholder="John"
+            maxLength={30}
           />
-          {errors.firstName && <Text style={styles.errorText}>{errors.firstName}</Text>}
 
-          <Text style={styles.label}>Last Name *</Text>
-          <TextInput
-            style={[styles.input, errors.lastName && styles.inputError]}
+          <InputField
+            label="Last Name *"
+            icon="person-outline"
             value={lastName}
-            onChangeText={t => { setLastName(t); setErrors(e => ({...e, lastName: null})) }}
+            onChangeText={handleLastName}
+            onBlur={() => markTouched("lastName")}
+            error={errors.lastName}
+            isTouched={touched.lastName}
+            placeholder="Doe"
+            maxLength={30}
           />
-          {errors.lastName && <Text style={styles.errorText}>{errors.lastName}</Text>}
 
-          <Text style={styles.label}>Email Address *</Text>
-          <TextInput
-            style={[styles.input, errors.email && styles.inputError]}
+          <InputField
+            label="Email Address *"
+            icon="mail-outline"
             value={email}
-            onChangeText={t => { setEmail(t); setErrors(e => ({...e, email: null})) }}
-            autoCapitalize="none"
+            onChangeText={(t) => setEmail(t)}
+            onBlur={() => markTouched("email")}
+            error={errors.email}
+            isTouched={touched.email}
+            placeholder="john@example.com"
             keyboardType="email-address"
           />
-          {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
-          <Text style={styles.label}>Phone Number</Text>
-          <TextInput
-            style={[styles.input, errors.phone && styles.inputError]}
-            value={phone}
-            onChangeText={t => { setPhone(t); setErrors(e => ({...e, phone: null})) }}
+          <InputField
+            label="Phone Number"
+            icon="call-outline"
+            value={displayPhone}
+            onChangeText={handlePhone}
+            onBlur={() => markTouched("phone")}
+            error={errors.phone}
+            isTouched={touched.phone}
+            placeholder="+94 XXXXXXXXX"
             keyboardType="phone-pad"
-            placeholder="e.g. +947XXXXXXXX"
+            maxLength={13}
           />
-          {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
 
-          <Text style={styles.label}>Password *</Text>
-          <TextInput
-            style={[styles.input, errors.password && styles.inputError]}
+          <InputField
+            label="Password *"
+            icon="lock-closed-outline"
             value={password}
-            onChangeText={t => { setPassword(t); setErrors(e => ({...e, password: null})) }}
-            secureTextEntry
+            onChangeText={(t) => setPassword(t)}
+            onBlur={() => markTouched("password")}
+            error={errors.password}
+            isTouched={touched.password}
+            placeholder="Min. 6 characters"
+            secureTextEntry={!showPassword}
+            rightIcon={
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#94A3B8" />
+              </TouchableOpacity>
+            }
           />
-          {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
         </View>
 
-        <View style={styles.formCard}>
-          <Text style={styles.sectionTitle}>Account & Roles</Text>
-          
-          <Text style={styles.label}>Roles</Text>
-          <View style={styles.radioGroup}>
-            <Checkbox label="Customer" value="customer" selectedValue={roles} onToggle={toggleRole} />
-            <Checkbox label="Provider" value="provider" selectedValue={roles} onToggle={toggleRole} />
-            <Checkbox label="Admin" value="admin" selectedValue={roles} onToggle={toggleRole} />
+        {/* Roles & Status Card */}
+        <View style={st.card}>
+          <View style={st.cardHeader}>
+            <View style={[st.cardIconWrap, { backgroundColor: "#3B82F615" }]}>
+              <Ionicons name="shield-checkmark-outline" size={18} color="#3B82F6" />
+            </View>
+            <Text style={st.cardTitle}>Roles & Status</Text>
           </View>
 
-          <Text style={[styles.label, { marginTop: 20 }]}>Provider Status</Text>
-          <View style={styles.radioGroupVertical}>
-            <RadioOption label="None" value="none" selectedValue={providerStatus} onSelect={setProviderStatus} />
-            <RadioOption label="Pending" value="pending" selectedValue={providerStatus} onSelect={setProviderStatus} />
-            <RadioOption label="Approved" value="approved" selectedValue={providerStatus} onSelect={setProviderStatus} />
+          <Text style={st.fieldLabel}>Assign Roles</Text>
+          <View style={st.chipRow}>
+            <RoleChip label="Customer" value="customer" icon="person-outline" selected={roles.includes("customer")} onToggle={toggleRole} />
+            <RoleChip label="Provider" value="provider" icon="construct-outline" selected={roles.includes("provider")} onToggle={toggleRole} />
+            <RoleChip label="Admin" value="admin" icon="shield-checkmark-outline" selected={roles.includes("admin")} onToggle={toggleRole} />
           </View>
 
-          <Text style={[styles.label, { marginTop: 20 }]}>Account Status</Text>
-          <View style={styles.radioGroup}>
-            <RadioOption label="Active" value={true} selectedValue={isActive} onSelect={setIsActive} />
-            <RadioOption label="Suspended" value={false} selectedValue={isActive} onSelect={setIsActive} />
+          <Text style={[st.fieldLabel, { marginTop: 20 }]}>Provider Status</Text>
+          <View style={st.pillRow}>
+            <RadioPill label="None" value="none" selectedValue={providerStatus} onSelect={setProviderStatus} color="#6B7280" />
+            <RadioPill label="Pending" value="pending" selectedValue={providerStatus} onSelect={setProviderStatus} color="#F59E0B" />
+            <RadioPill label="Approved" value="approved" selectedValue={providerStatus} onSelect={setProviderStatus} color="#10B981" />
+          </View>
+
+          <Text style={[st.fieldLabel, { marginTop: 20 }]}>Account Status</Text>
+          <View style={st.pillRow}>
+            <RadioPill label="Active" value={true} selectedValue={isActive} onSelect={setIsActive} color="#10B981" />
+            <RadioPill label="Suspended" value={false} selectedValue={isActive} onSelect={setIsActive} color="#EF4444" />
           </View>
         </View>
 
-        <TouchableOpacity style={styles.saveBtn} onPress={handleCreate} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Create User</Text>}
+        {/* Create Button */}
+        <TouchableOpacity style={[st.createBtn, !isValid && { opacity: 0.6 }]} onPress={handleCreate} disabled={loading} activeOpacity={0.8}>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Ionicons name="person-add-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={st.createBtnText}>Create User</Text>
+            </View>
+          )}
         </TouchableOpacity>
-        
+
         <View style={{ height: 40 }} />
       </KeyboardAwareScrollView>
     </SafeAreaView>
@@ -175,38 +292,62 @@ const AdminCreateUserScreen = ({ navigation }) => {
 
 export default AdminCreateUserScreen;
 
-const styles = StyleSheet.create({
+const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F1F5F0" },
-  header: { 
-    backgroundColor: "#135E4B", flexDirection: "row", alignItems: "center", 
-    justifyContent: "space-between", paddingTop: 44, paddingBottom: 16, paddingHorizontal: 16 
+  header: {
+    backgroundColor: "#135E4B", flexDirection: "row", alignItems: "center",
+    paddingTop: 44, paddingBottom: 16, paddingHorizontal: 16,
   },
-  backBtn: { padding: 4 },
+  backBtn: { padding: 4, marginRight: 12 },
   headerTitle: { fontSize: 20, fontWeight: "bold", color: "#fff" },
+  headerSub: { fontSize: 12, color: "#A8D5BA", marginTop: 2 },
   content: { padding: 16 },
-  formCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
+
+  // Card
+  card: {
+    backgroundColor: "#fff", borderRadius: 16, padding: 20, marginBottom: 16,
+    elevation: 2, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 3 },
   },
-  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#1f2937", marginBottom: 16 },
-  label: { fontSize: 13, fontWeight: "600", color: "#4b5563", marginBottom: 6 },
-  input: {
-    backgroundColor: "#f9fafb", borderWidth: 1, borderColor: "#d1d5db",
-    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: "#1f2937", marginBottom: 12,
+  cardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
+  cardIconWrap: {
+    width: 36, height: 36, borderRadius: 10, backgroundColor: "#135E4B15",
+    alignItems: "center", justifyContent: "center", marginRight: 12,
   },
-  inputError: { borderColor: "#ef4444", backgroundColor: "#fef2f2" },
-  errorText: { color: "#ef4444", fontSize: 12, marginTop: -8, marginBottom: 12 },
-  radioGroup: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 16 },
-  radioGroupVertical: { gap: 12 },
-  radioOption: { flexDirection: "row", alignItems: "center" },
-  radioCircle: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: "#d1d5db", marginRight: 10 },
-  radioCircleSelected: { borderColor: "#135E4B", backgroundColor: "#135E4B", borderWidth: 6 },
-  checkboxSquare: { width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: "#d1d5db", marginRight: 10, alignItems: "center", justifyContent: "center" },
-  checkboxSquareSelected: { borderColor: "#135E4B", backgroundColor: "#135E4B" },
-  radioLabel: { fontSize: 15, color: "#4b5563" },
-  saveBtn: { backgroundColor: "#135E4B", paddingVertical: 16, borderRadius: 12, alignItems: "center" },
-  saveBtnText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  cardTitle: { fontSize: 17, fontWeight: "bold", color: "#1F2937" },
+
+  // Input Fields
+  fieldLabel: { fontSize: 12, fontWeight: "700", color: "#64748B", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.3 },
+  inputWrapper: {
+    flexDirection: "row", alignItems: "center", backgroundColor: "#F8FAFC",
+    borderWidth: 1.5, borderColor: "#E2E8F0", borderRadius: 12, paddingHorizontal: 14, height: 48,
+  },
+  inputWrapperError: { borderColor: "#EF4444", backgroundColor: "#FEF2F2" },
+  inputInner: { flex: 1, fontSize: 15, color: "#1F2937" },
+  errorText: { color: "#EF4444", fontSize: 11, fontWeight: "600", marginTop: 4 },
+
+  // Role Chips
+  chipRow: { flexDirection: "row", flexWrap: "wrap" },
+  chipBtn: {
+    flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 10,
+    borderRadius: 12, backgroundColor: "#F1F5F9", borderWidth: 1.5, borderColor: "#E2E8F0", marginRight: 10, marginBottom: 8,
+  },
+  chipBtnActive: { backgroundColor: "#135E4B", borderColor: "#135E4B" },
+  chipBtnText: { fontSize: 14, color: "#64748B", fontWeight: "600", marginLeft: 8 },
+  chipBtnTextActive: { color: "#fff" },
+
+  // Radio Pills
+  pillRow: { flexDirection: "row", flexWrap: "wrap" },
+  radioPill: {
+    flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 20, backgroundColor: "#F8FAFC", borderWidth: 1.5, borderColor: "#E2E8F0", marginRight: 10, marginBottom: 8,
+  },
+  radioDot: { width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: "#CBD5E1", marginRight: 8 },
+  radioPillText: { fontSize: 13, color: "#64748B", fontWeight: "600" },
+
+  // Create Button
+  createBtn: {
+    backgroundColor: "#135E4B", paddingVertical: 16, borderRadius: 14, alignItems: "center",
+    elevation: 3, shadowColor: "#135E4B", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
+  },
+  createBtnText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });
