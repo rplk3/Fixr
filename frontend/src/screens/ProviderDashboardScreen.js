@@ -500,11 +500,11 @@ const ProviderDashboardScreen = () => {
           <Text style={st.statLabel}>Active</Text>
         </View>
         <View style={st.statCard}>
-          <Text style={[st.statNumber, { color: "#10B981" }]}>Rs.{earnings.totalEarnings?.toLocaleString() || 0}</Text>
+          <Text style={[st.statNumber, { color: "#10B981" }]} numberOfLines={1} adjustsFontSizeToFit>Rs. {earnings.totalEarnings?.toLocaleString() || 0}</Text>
           <Text style={st.statLabel}>Earned</Text>
         </View>
         <View style={st.statCard}>
-          <Text style={[st.statNumber, { color: "#F59E0B" }]}>{reviewsData.averageRating || "—"}</Text>
+          <Text style={[st.statNumber, { color: "#F59E0B" }]} numberOfLines={1}>{reviewsData.averageRating || "—"}</Text>
           <Text style={st.statLabel}>Rating</Text>
         </View>
       </View>
@@ -843,9 +843,9 @@ const st = StyleSheet.create({
     paddingVertical: 8, borderRadius: 8, alignItems: "center",
   },
   switchButtonText: { color: "#fff", fontWeight: "bold", fontSize: 13, marginLeft: 6 },
-  statsRow: { flexDirection: "row", padding: 16, gap: 10 },
+  statsRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 10 },
   statCard: {
-    flex: 1, backgroundColor: "#fff", padding: 12, borderRadius: 14, alignItems: "center",
+    width: "48%", backgroundColor: "#fff", padding: 16, borderRadius: 14, alignItems: "center", marginBottom: 12,
     elevation: 2, shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
   },
   statNumber: { fontSize: 16, fontWeight: "bold", color: "#135E4B", marginBottom: 2 },

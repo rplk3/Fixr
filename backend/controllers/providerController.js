@@ -68,6 +68,23 @@ exports.updateProviderStatus = async (req, res) => {
     user.providerStatus = status;
     if (status === "approved" && !user.roles.includes("provider")) {
       user.roles.push("provider");
+      
+      const Service = require("../models/Service");
+      const existingService = await Service.findOne({ provider: provider.user, title: provider.title });
+      if (!existingService) {
+        await Service.create({
+          title: provider.title,
+          description: provider.description,
+          category: provider.category,
+          price: provider.price,
+          location: provider.location,
+          availability: provider.availability,
+          image: provider.image,
+          provider: provider.user,
+          status: "pending",
+          visibilityStatus: "disabled"
+        });
+      }
     }
     if (status === "rejected") {
       user.roles = user.roles.filter((r) => r !== "provider");

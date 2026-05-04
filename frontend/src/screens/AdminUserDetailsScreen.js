@@ -128,73 +128,92 @@ const AdminUserDetailsScreen = ({ route, navigation }) => {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View>
+        {/* Profile Card */}
+        <View style={styles.profileCard}>
+          <View style={styles.profileHeader}>
+            <View style={styles.avatarLarge}>
+              <Text style={styles.avatarTextLarge}>{(user.firstName?.charAt(0) || "U").toUpperCase()}</Text>
+            </View>
+            <View style={styles.profileInfo}>
               <Text style={styles.name}>{user.firstName} {user.lastName}</Text>
               <Text style={styles.email}>{user.email}</Text>
-            </View>
-            <View style={[styles.badge, { backgroundColor: user.isActive ? "#10B98120" : "#EF444420" }]}>
-              <Text style={[styles.badgeText, { color: user.isActive ? "#10B981" : "#EF4444" }]}>
-                {user.isActive ? "ACTIVE" : "SUSPENDED"}
-              </Text>
+              <View style={[styles.badge, { backgroundColor: user.isActive ? "#10B98120" : "#EF444420", marginTop: 8 }]}>
+                <Text style={[styles.badgeText, { color: user.isActive ? "#10B981" : "#EF4444" }]}>
+                  {user.isActive ? "ACTIVE ACCOUNT" : "SUSPENDED"}
+                </Text>
+              </View>
             </View>
           </View>
 
-          <View style={styles.infoRow}>
-            <Ionicons name="call-outline" size={20} color="#6b7280" />
-            <Text style={styles.infoText}>{user.phone || "No phone number"}</Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <Ionicons name="calendar-outline" size={20} color="#6b7280" />
-            <Text style={styles.infoText}>Joined: {new Date(user.createdAt).toLocaleDateString()}</Text>
+          <View style={styles.detailsGrid}>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Phone</Text>
+              <View style={styles.detailRow}>
+                <Ionicons name="call-outline" size={18} color="#64748B" />
+                <Text style={styles.detailValue}>{user.phone || "Not provided"}</Text>
+              </View>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Member Since</Text>
+              <View style={styles.detailRow}>
+                <Ionicons name="calendar-outline" size={18} color="#64748B" />
+                <Text style={styles.detailValue}>{new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</Text>
+              </View>
+            </View>
           </View>
 
           <View style={styles.divider} />
 
-          <Text style={styles.sectionTitle}>Roles & Status</Text>
+          <Text style={styles.sectionHeader}>Roles & Permissions</Text>
           <View style={styles.rolesRow}>
             {user.roles?.map(r => (
               <View key={r} style={styles.roleBadge}>
-                <Text style={styles.roleText}>{r}</Text>
+                <Text style={styles.roleText}>{r.toUpperCase()}</Text>
               </View>
             ))}
           </View>
           
-          <View style={{ marginTop: 12 }}>
-            <Text style={styles.subLabel}>Provider Status</Text>
-            <Text style={styles.subValue}>{user.providerStatus?.toUpperCase()}</Text>
-          </View>
-
-        </View>
-
-        <View style={styles.actionsBox}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          
-          <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate("AdminEditUser", { user })}>
-            <Ionicons name="create-outline" size={22} color="#3B82F6" />
-            <Text style={[styles.actionText, { color: "#3B82F6" }]}>Edit User</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionBtn} onPress={handleChangeRole}>
-            <Ionicons name="shield-outline" size={22} color="#8B5CF6" />
-            <Text style={[styles.actionText, { color: "#8B5CF6" }]}>Change Role</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionBtn} onPress={handleToggleStatus}>
-            <Ionicons name={user.isActive ? "ban-outline" : "checkmark-circle-outline"} size={22} color={user.isActive ? "#F59E0B" : "#10B981"} />
-            <Text style={[styles.actionText, { color: user.isActive ? "#F59E0B" : "#10B981" }]}>
-              {user.isActive ? "Suspend User" : "Activate User"}
+          <View style={styles.statusBox}>
+            <Text style={styles.detailLabel}>Service Provider Status</Text>
+            <Text style={[styles.statusValue, { color: user.providerStatus === "approved" ? "#10B981" : "#64748B" }]}>
+              {user.providerStatus?.toUpperCase() || "NONE"}
             </Text>
+          </View>
+        </View>
+
+        {/* Quick Actions Grid */}
+        <Text style={[styles.sectionHeader, { marginLeft: 4, marginTop: 10, marginBottom: 16 }]}>Account Management</Text>
+        <View style={styles.actionsGrid}>
+          <TouchableOpacity style={styles.actionTile} onPress={() => navigation.navigate("AdminEditUser", { user })}>
+            <View style={[styles.actionIcon, { backgroundColor: "#3B82F615" }]}>
+              <Ionicons name="create-outline" size={24} color="#3B82F6" />
+            </View>
+            <Text style={styles.actionTileLabel}>Edit Details</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.actionBtn, { borderBottomWidth: 0 }]} onPress={handleDelete}>
-            <Ionicons name="trash-outline" size={22} color="#EF4444" />
-            <Text style={[styles.actionText, { color: "#EF4444" }]}>Delete User</Text>
+          <TouchableOpacity style={styles.actionTile} onPress={handleChangeRole}>
+            <View style={[styles.actionIcon, { backgroundColor: "#8B5CF615" }]}>
+              <Ionicons name="shield-outline" size={24} color="#8B5CF6" />
+            </View>
+            <Text style={styles.actionTileLabel}>Change Role</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionTile} onPress={handleToggleStatus}>
+            <View style={[styles.actionIcon, { backgroundColor: user.isActive ? "#F59E0B15" : "#10B98115" }]}>
+              <Ionicons name={user.isActive ? "ban-outline" : "checkmark-circle-outline"} size={24} color={user.isActive ? "#F59E0B" : "#10B981"} />
+            </View>
+            <Text style={styles.actionTileLabel}>{user.isActive ? "Suspend" : "Activate"}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionTile} onPress={handleDelete}>
+            <View style={[styles.actionIcon, { backgroundColor: "#EF444415" }]}>
+              <Ionicons name="trash-outline" size={24} color="#EF4444" />
+            </View>
+            <Text style={styles.actionTileLabel}>Delete</Text>
           </TouchableOpacity>
         </View>
 
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -203,7 +222,7 @@ const AdminUserDetailsScreen = ({ route, navigation }) => {
 export default AdminUserDetailsScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F1F5F0" },
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
   header: { 
     backgroundColor: "#135E4B", 
     flexDirection: "row", 
@@ -215,35 +234,40 @@ const styles = StyleSheet.create({
   },
   backBtn: { padding: 4 },
   editBtn: { padding: 4 },
-  headerTitle: { fontSize: 20, fontWeight: "bold", color: "#fff" },
+  headerTitle: { fontSize: 18, fontWeight: "bold", color: "#fff" },
   content: { padding: 16 },
-  card: {
+  profileCard: {
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 20,
     padding: 20,
-    marginBottom: 16,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
+    marginBottom: 20,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 3,
   },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 },
-  name: { fontSize: 22, fontWeight: "bold", color: "#1f2937" },
-  email: { fontSize: 15, color: "#6b7280", marginTop: 4 },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-  badgeText: { fontSize: 12, fontWeight: "bold" },
-  infoRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
-  infoText: { fontSize: 15, color: "#4b5563", marginLeft: 12 },
-  divider: { height: 1, backgroundColor: "#e5e7eb", marginVertical: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: "bold", color: "#1f2937", marginBottom: 12 },
+  profileHeader: { flexDirection: "row", alignItems: "center", marginBottom: 24 },
+  avatarLarge: { width: 70, height: 70, borderRadius: 35, backgroundColor: "#135E4B15", alignItems: "center", justifyContent: "center", marginRight: 20 },
+  avatarTextLarge: { fontSize: 28, fontWeight: "bold", color: "#135E4B" },
+  profileInfo: { flex: 1 },
+  name: { fontSize: 22, fontWeight: "bold", color: "#1E293B" },
+  email: { fontSize: 14, color: "#64748B", marginTop: 2 },
+  badge: { alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  badgeText: { fontSize: 11, fontWeight: "800" },
+  detailsGrid: { flexDirection: "row", justifyContent: "space-between", flexWrap: "wrap" },
+  detailItem: { width: "48%", marginBottom: 16 },
+  detailLabel: { fontSize: 12, color: "#94A3B8", fontWeight: "600", marginBottom: 6 },
+  detailRow: { flexDirection: "row", alignItems: "center" },
+  detailValue: { fontSize: 14, color: "#334155", fontWeight: "600", marginLeft: 8 },
+  divider: { height: 1, backgroundColor: "#F1F5F9", marginVertical: 16 },
+  sectionHeader: { fontSize: 14, fontWeight: "bold", color: "#1E293B", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 },
   rolesRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  roleBadge: { backgroundColor: "#135E4B20", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
-  roleText: { fontSize: 13, color: "#135E4B", fontWeight: "600", textTransform: "capitalize" },
-  subLabel: { fontSize: 13, color: "#6b7280", marginBottom: 4 },
-  subValue: { fontSize: 15, color: "#1f2937", fontWeight: "600" },
-  actionsBox: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
+  roleBadge: { backgroundColor: "#135E4B10", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  roleText: { fontSize: 11, color: "#135E4B", fontWeight: "bold" },
+  statusBox: { marginTop: 20 },
+  statusValue: { fontSize: 14, fontWeight: "bold" },
+  actionsGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
+  actionTile: { 
+    width: "48%", backgroundColor: "#fff", padding: 16, borderRadius: 16, alignItems: "center", marginBottom: 16,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
   },
-  actionBtn: { flexDirection: "row", alignItems: "center", paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: "#e5e7eb" },
-  actionText: { fontSize: 16, fontWeight: "600", marginLeft: 12 },
+  actionIcon: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", marginBottom: 10 },
+  actionTileLabel: { fontSize: 13, fontWeight: "700", color: "#334155" },
 });

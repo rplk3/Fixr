@@ -40,11 +40,48 @@ const PaymentScreen = () => {
     .trim();
 
   const handleExpiryChange = (text) => {
-    const digits = text.replace(/[^0-9]/g, "").slice(0, 4);
-    if (digits.length >= 3) {
-      setExpiry(`${digits.slice(0, 2)}/${digits.slice(2)}`);
+    // Allow deleting smoothly
+    if (text.length < expiry.length) {
+      setExpiry(text);
+      return;
+    }
+
+    let val = text.replace(/[^0-9]/g, "");
+
+    // Month validation
+    if (val.length > 0) {
+      if (val[0] > "1") val = "0" + val; // e.g. "2" -> "02"
+    }
+    if (val.length > 1) {
+      let month = parseInt(val.substring(0, 2), 10);
+      if (month === 0) val = "01" + val.substring(2);
+      else if (month > 12) val = "12" + val.substring(2);
+    }
+
+    // Year validation (when all 4 digits are entered)
+    if (val.length === 4) {
+      let month = parseInt(val.substring(0, 2), 10);
+      let year = parseInt("20" + val.substring(2, 4), 10);
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+
+      if (year < currentYear) {
+        // If past year, force to current year
+        val = val.substring(0, 2) + String(currentYear).slice(-2);
+        year = currentYear;
+      }
+      
+      if (year === currentYear && month < currentMonth) {
+        // If current year but past month, force to current month
+        val = String(currentMonth).padStart(2, "0") + String(currentYear).slice(-2);
+      }
+    }
+
+    if (val.length >= 3) {
+      setExpiry(`${val.substring(0, 2)}/${val.substring(2, 4)}`);
     } else {
-      setExpiry(digits);
+      setExpiry(val);
     }
   };
 

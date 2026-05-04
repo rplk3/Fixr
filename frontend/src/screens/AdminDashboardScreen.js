@@ -105,6 +105,7 @@ const DashboardPage = ({ stats, loading, onRefresh, selectPage }) => {
 const UsersPage = ({ users, loading, onRefresh, navigation }) => {
   const [filterRole, setFilterRole] = React.useState("all");
   const [filterStatus, setFilterStatus] = React.useState("all");
+  const [searchQuery, setSearchQuery] = React.useState("");
 
   const stats = {
     total: users.length,
@@ -121,6 +122,14 @@ const UsersPage = ({ users, loading, onRefresh, navigation }) => {
   if (filterStatus === "suspended") filtered = filtered.filter(u => !u.isActive);
   else if (filterStatus === "active") filtered = filtered.filter(u => u.isActive);
   else if (filterStatus === "pendingProvider") filtered = filtered.filter(u => u.providerStatus === "pending");
+
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase().trim();
+    filtered = filtered.filter(u => 
+      (u.firstName + " " + u.lastName).toLowerCase().includes(q) || 
+      u.email.toLowerCase().includes(q)
+    );
+  }
 
   const renderStatCard = (title, val, color) => (
     <View style={[s.statCard, { borderLeftColor: color }]}>
@@ -150,6 +159,25 @@ const UsersPage = ({ users, loading, onRefresh, navigation }) => {
           renderItem={({ item }) => renderStatCard(item.title, item.val, item.color)}
         />
       </View>
+
+      <View style={s.searchSection}>
+        <View style={s.searchBar}>
+          <Ionicons name="search-outline" size={20} color="#94A3B8" />
+          <TextInput
+            style={s.searchInput}
+            placeholder="Search by name or email..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="#94A3B8"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <Ionicons name="close-circle" size={20} color="#94A3B8" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
       <View style={s.filters}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {["all", "customer", "provider", "admin"].map(role => (
@@ -963,4 +991,10 @@ const s = StyleSheet.create({
   rolesRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 },
   roleBadge: { backgroundColor: "#135E4B15", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   roleText: { fontSize: 10, color: "#135E4B", fontWeight: "bold" },
+  searchSection: { padding: 16, backgroundColor: "#fff" },
+  searchBar: { 
+    flexDirection: "row", alignItems: "center", backgroundColor: "#F1F5F9", 
+    paddingHorizontal: 12, borderRadius: 12, height: 48 
+  },
+  searchInput: { flex: 1, fontSize: 15, color: "#1E293B", marginLeft: 10 },
 });

@@ -74,9 +74,9 @@ const OnboardingScreen = ({ navigation }) => {
       const asset = result.assets[0];
       const fileName = (asset.fileName || asset.uri.split("/").pop() || "").toLowerCase();
 
-      // Validate PNG only
-      if (!fileName.endsWith(".png")) {
-        setErrorMsg("Only PNG images are allowed.");
+      // Validate image extension broadly
+      if (!fileName.match(/\.(png|jpe?g|webp)$/i)) {
+        setErrorMsg("Only PNG, JPG/JPEG, and WEBP images are allowed.");
         return;
       }
 

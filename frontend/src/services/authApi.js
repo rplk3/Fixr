@@ -1,4 +1,5 @@
 import { API_BASE_URL as BASE_URL, IMAGE_BASE_URL } from "../config/api";
+import { Platform } from "react-native";
 
 // In-memory token storage
 let authToken = null;
@@ -69,9 +70,17 @@ export const uploadImage = async (imageUri) => {
   const formData = new FormData();
   const filename = imageUri.split('/').pop() || 'image.jpg';
   const match = /\.(\w+)$/.exec(filename);
-  const type = match ? `image/${match[1]}` : `image/jpeg`;
+  let ext = match ? match[1].toLowerCase() : 'jpeg';
+  if (ext === 'jpg') ext = 'jpeg';
+  const type = `image/${ext}`;
 
-  formData.append('image', { uri: imageUri, name: filename, type });
+  if (Platform.OS === 'web') {
+    const r = await fetch(imageUri);
+    const blob = await r.blob();
+    formData.append('image', blob, filename);
+  } else {
+    formData.append('image', { uri: imageUri, name: filename, type });
+  }
 
   const res = await fetch(`${BASE_URL}/upload`, {
     method: 'POST',
@@ -81,7 +90,16 @@ export const uploadImage = async (imageUri) => {
     },
   });
 
-  const url = await res.text();
-  if (!res.ok) throw new Error('Image upload failed');
-  return url;
+  const text = await res.text();
+  if (!res.ok) {
+    let errMsg = "Image upload failed";
+    try {
+      const err = JSON.parse(text);
+      errMsg = err.message || errMsg;
+    } catch {
+      errMsg = `Upload error: ${res.status} - ${text.slice(0, 50)}`;
+    }
+    throw new Error(errMsg);
+  }
+  return text;
 };
