@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 const WelcomeScreen = ({ navigation }) => {
   return (
@@ -7,7 +8,9 @@ const WelcomeScreen = ({ navigation }) => {
       {/* Hero Section */}
       <View style={styles.hero}>
         <Text style={styles.logo}>Fixr</Text>
-        <Text style={styles.heroEmoji}>🔧</Text>
+        <View style={styles.heroIconCircle}>
+          <Ionicons name="construct" size={48} color="#135E4B" />
+        </View>
       </View>
 
       {/* Content Card */}
@@ -56,8 +59,13 @@ const styles = StyleSheet.create({
     color: "#fff",
     marginBottom: 10,
   },
-  heroEmoji: {
-    fontSize: 80,
+  heroIconCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   card: {
     backgroundColor: "#fff",

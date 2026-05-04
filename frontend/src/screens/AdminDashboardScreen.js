@@ -9,7 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   getAdminDashboard, getAdminServices, deleteAdminService, updateAdminService,
   getAdminBookings, getAdminProviders, updateProviderStatus, deleteAdminProvider,
-  getAdminPayments, getAdminReviews, deleteAdminReview, getPendingServices, approveServiceUpdate, rejectServiceUpdate,
+  getAdminPayments, getAdminReviews, deleteAdminReview, getPendingServices, approveServiceUpdate, rejectServiceUpdate, getAdminUsers,
 } from "../services/adminApi";
 import { getAdminComplaints } from "../services/complaintApi";
 import { setToken, setUser } from "../services/authApi";
@@ -26,7 +26,6 @@ const MENU = [
   { key: "bookings", label: "Bookings", icon: "calendar-outline" },
   { key: "payments", label: "Payments", icon: "card-outline" },
   { key: "feedbacks", label: "Feedbacks", icon: "chatbubbles-outline" },
-  { key: "media", label: "Media", icon: "images-outline" },
 ];
 
 const SUBTITLES = {
@@ -36,33 +35,166 @@ const SUBTITLES = {
   bookings: "Appointments",
   payments: "Financial Records",
   feedbacks: "Reviews & Support",
-  media: "Images",
 };
 
 // ─── Dashboard Cards ───
-const DashboardPage = ({ stats, loading, onRefresh, navigation }) => {
+const DashboardPage = ({ stats, loading, onRefresh, selectPage }) => {
   const cards = [
     { label: "Total Users", value: stats.totalUsers, icon: "people", color: "#3B82F6" },
-    { label: "Total Providers", value: stats.totalProviders, icon: "briefcase", color: "#8B5CF6" },
-    { label: "Pending Providers", value: stats.pendingProviders, icon: "hourglass", color: "#F59E0B" },
-    { label: "Total Services", value: stats.totalServices, icon: "construct", color: "#10B981" },
-    { label: "Total Bookings", value: stats.totalBookings, icon: "calendar", color: "#EC4899" },
-    { label: "Total Reviews", value: stats.totalReviews, icon: "star", color: "#6366F1" },
-    { label: "Total Complaints", value: stats.totalComplaints, icon: "warning", color: "#EF4444" },
+    { label: "Providers", value: stats.totalProviders, icon: "briefcase", color: "#8B5CF6" },
+    { label: "Services", value: stats.totalServices, icon: "construct", color: "#10B981" },
+    { label: "Bookings", value: stats.totalBookings, icon: "calendar", color: "#EC4899" },
+    { label: "Payments", value: stats.totalPayments || 0, icon: "card", color: "#14B8A6" },
+    { label: "Complaints", value: stats.totalComplaints, icon: "warning", color: "#EF4444" },
   ];
-  if (loading) return <ActivityIndicator size="large" color="#135E4B" style={{ marginTop: 40 }} />;
+
+  const quickActions = [
+    { key: "users", label: "Manage Users", icon: "people-outline", color: "#3B82F6" },
+    { key: "services", label: "Manage Services", icon: "construct-outline", color: "#10B981" },
+    { key: "bookings", label: "Manage Bookings", icon: "calendar-outline", color: "#EC4899" },
+    { key: "payments", label: "Manage Payments", icon: "card-outline", color: "#14B8A6" },
+    { key: "feedbacks", label: "Feedbacks & Complaints", icon: "chatbubbles-outline", color: "#F59E0B" },
+  ];
+
   return (
-    <ScrollView contentContainerStyle={s.cardsWrap} refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}>
-      {cards.map((c) => (
-        <View key={c.label} style={[s.card, { borderLeftColor: c.color }]}>  
-          <View style={[s.cardIcon, { backgroundColor: c.color + "20" }]}>
-            <Ionicons name={c.icon} size={22} color={c.color} />
+    <ScrollView contentContainerStyle={s.dashScroll} refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}>
+      {/* Summary Cards Grid */}
+      <View style={s.sectionHeader}>
+        <Text style={s.sectionTitle}>System Metrics</Text>
+      </View>
+      <View style={s.cardsGrid}>
+        {cards.map((c) => (
+          <View key={c.label} style={[s.dashCard]}>
+            <View style={s.dashCardTop}>
+              <View style={[s.cardIcon, { backgroundColor: c.color + "1A" }]}>
+                <Ionicons name={c.icon} size={20} color={c.color} />
+              </View>
+              <Text style={s.cardVal}>{c.value ?? 0}</Text>
+            </View>
+            <Text style={s.cardLabel}>{c.label}</Text>
           </View>
-          <Text style={s.cardVal}>{c.value ?? 0}</Text>
-          <Text style={s.cardLabel}>{c.label}</Text>
-        </View>
-      ))}
+        ))}
+      </View>
+
+      {/* Quick Action Grid */}
+      <View style={s.sectionHeader}>
+        <Text style={s.sectionTitle}>Quick Actions</Text>
+      </View>
+      <View style={s.actionGrid}>
+        {quickActions.map((a) => (
+          <TouchableOpacity key={a.key} style={s.actionBtn} onPress={() => selectPage(a.key)} activeOpacity={0.7}>
+            <View style={[s.actionIconWrap, { backgroundColor: a.color + "10" }]}>
+              <Ionicons name={a.icon} size={24} color={a.color} />
+            </View>
+            <Text style={s.actionLabel}>{a.label}</Text>
+            <Ionicons name="chevron-forward" size={16} color="#CBD5E1" style={s.actionArrow} />
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={{ height: 40 }} />
     </ScrollView>
+  );
+};
+
+// ─── Users Page ───
+const UsersPage = ({ users, loading, onRefresh, navigation }) => {
+  const [filterRole, setFilterRole] = React.useState("all");
+  const [filterStatus, setFilterStatus] = React.useState("all");
+
+  const stats = {
+    total: users.length,
+    customers: users.filter(u => u.roles?.includes("customer") && !u.roles?.includes("provider") && !u.roles?.includes("admin")).length,
+    providers: users.filter(u => u.roles?.includes("provider")).length,
+    admins: users.filter(u => u.roles?.includes("admin")).length,
+    pendingProviders: users.filter(u => u.providerStatus === "pending").length,
+    active: users.filter(u => u.isActive).length,
+    suspended: users.filter(u => !u.isActive).length,
+  };
+
+  let filtered = users;
+  if (filterRole !== "all") filtered = filtered.filter(u => u.roles?.includes(filterRole));
+  if (filterStatus === "suspended") filtered = filtered.filter(u => !u.isActive);
+  else if (filterStatus === "active") filtered = filtered.filter(u => u.isActive);
+  else if (filterStatus === "pendingProvider") filtered = filtered.filter(u => u.providerStatus === "pending");
+
+  const renderStatCard = (title, val, color) => (
+    <View style={[s.statCard, { borderLeftColor: color }]}>
+      <Text style={s.statVal}>{val}</Text>
+      <Text style={s.statTitle}>{title}</Text>
+    </View>
+  );
+
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={s.statsContainer}>
+        <Text style={[s.sectionTitle, { marginHorizontal: 16, marginBottom: 12 }]}>User Overview</Text>
+        <FlatList
+          data={[
+            { title: "Total Users", val: stats.total, color: "#3B82F6" },
+            { title: "Active", val: stats.active, color: "#10B981" },
+            { title: "Suspended", val: stats.suspended, color: "#EF4444" },
+            { title: "Customers", val: stats.customers, color: "#8B5CF6" },
+            { title: "Providers", val: stats.providers, color: "#F59E0B" },
+            { title: "Pending Prov.", val: stats.pendingProviders, color: "#EC4899" },
+            { title: "Admins", val: stats.admins, color: "#6366F1" },
+          ]}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          keyExtractor={item => item.title}
+          renderItem={({ item }) => renderStatCard(item.title, item.val, item.color)}
+        />
+      </View>
+      <View style={s.filters}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {["all", "customer", "provider", "admin"].map(role => (
+            <TouchableOpacity key={role} style={[s.filterChip, filterRole === role && s.filterChipActive]} onPress={() => setFilterRole(role)}>
+              <Text style={[s.filterText, filterRole === role && s.filterTextActive]}>{role.toUpperCase()}</Text>
+            </TouchableOpacity>
+          ))}
+          <View style={s.filterDivider} />
+          {["all", "active", "suspended", "pendingProvider"].map(status => (
+            <TouchableOpacity key={status} style={[s.filterChip, filterStatus === status && s.filterChipActive]} onPress={() => setFilterStatus(status)}>
+              <Text style={[s.filterText, filterStatus === status && s.filterTextActive]}>{status.toUpperCase()}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+      <ListPage data={filtered} loading={loading} onRefresh={onRefresh} emptyMsg="No users found"
+        renderItem={({ item }) => (
+          <TouchableOpacity style={s.userCard} onPress={() => navigation.navigate("AdminUserDetails", { userId: item._id })} activeOpacity={0.7}>
+            <View style={s.userCardInner}>
+              <View style={s.userAvatar}>
+                <Text style={s.userAvatarText}>{(item.firstName?.charAt(0) || "U").toUpperCase()}</Text>
+              </View>
+              
+              <View style={s.userInfo}>
+                <Text style={s.userName}>{item.firstName} {item.lastName}</Text>
+                <Text style={s.userEmail}>{item.email}</Text>
+                {item.phone ? <Text style={s.userPhone}>{item.phone}</Text> : null}
+                
+                <View style={s.rolesRow}>
+                  {item.roles?.map(r => (
+                    <View key={r} style={s.roleBadge}><Text style={s.roleText}>{r.toUpperCase()}</Text></View>
+                  ))}
+                  {item.providerStatus && item.providerStatus !== "none" && (
+                    <View style={[s.roleBadge, { backgroundColor: "#F59E0B20" }]}><Text style={[s.roleText, { color: "#D97706" }]}>PROV: {item.providerStatus.toUpperCase()}</Text></View>
+                  )}
+                </View>
+              </View>
+
+              <View style={s.userActions}>
+                <View style={[s.badge, { backgroundColor: item.isActive ? "#10B98120" : "#EF444420", marginTop: 0 }]}>
+                  <Text style={[s.badgeText, { color: item.isActive ? "#10B981" : "#EF4444" }]}>{item.isActive ? "ACTIVE" : "SUSP"}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#CBD5E1" style={{ marginTop: 16 }} />
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
+      />
+    </View>
   );
 };
 
@@ -97,6 +229,7 @@ const AdminDashboardScreen = ({ navigation }) => {
   const [services, setServices] = useState([]);
   const [pendingServices, setPendingServices] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [users, setUsers] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [providers, setProviders] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -131,6 +264,7 @@ const AdminDashboardScreen = ({ navigation }) => {
     setLoading(true);
     try {
       if (p === "dashboard") setStats(await getAdminDashboard());
+      else if (p === "users") setUsers(await getAdminUsers());
       else if (p === "services") {
         setServices(await getAdminServices());
         setPendingServices(await getPendingServices());
@@ -156,11 +290,6 @@ const AdminDashboardScreen = ({ navigation }) => {
   );
 
   const selectPage = (key) => { 
-    if (key === "users") {
-      setSidebarOpen(false);
-      navigation.navigate("AdminUsers");
-      return;
-    }
     setPage(key); 
     setSidebarOpen(false); 
   };
@@ -275,7 +404,9 @@ const AdminDashboardScreen = ({ navigation }) => {
   const renderContent = () => {
     switch (page) {
       case "dashboard":
-        return <DashboardPage stats={stats} loading={loading} onRefresh={() => load("dashboard")} navigation={navigation} />;
+        return <DashboardPage stats={stats} loading={loading} onRefresh={() => load("dashboard")} selectPage={selectPage} />;
+      case "users":
+        return <UsersPage users={users} loading={loading} onRefresh={() => load("users")} navigation={navigation} />;
       case "services":
         return (
           <View style={{ flex: 1 }}>
@@ -583,13 +714,6 @@ const AdminDashboardScreen = ({ navigation }) => {
             )}
           </View>
         );
-      case "media":
-        return (
-          <ScrollView contentContainerStyle={s.emptyWrap}>
-            <Ionicons name="images-outline" size={50} color="#999" />
-            <Text style={s.emptyText}>Media management coming soon</Text>
-          </ScrollView>
-        );
       default:
         return null;
     }
@@ -606,6 +730,11 @@ const AdminDashboardScreen = ({ navigation }) => {
           <Text style={s.headerTitle}>{MENU.find((m) => m.key === page)?.label}</Text>
           <Text style={s.headerSub}>{SUBTITLES[page]}</Text>
         </View>
+        {page === "users" && (
+          <TouchableOpacity onPress={() => navigation.navigate("AdminCreateUser")} style={{ padding: 8 }}>
+            <Ionicons name="person-add" size={24} color="#fff" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Content */}
@@ -629,7 +758,6 @@ const AdminDashboardScreen = ({ navigation }) => {
                 {m.key === "bookings" && <Text style={s.sidebarHint}>Appointments</Text>}
                 {m.key === "payments" && <Text style={s.sidebarHint}>Financial Records</Text>}
                 {m.key === "feedbacks" && <Text style={s.sidebarHint}>Reviews & Support</Text>}
-                {m.key === "media" && <Text style={s.sidebarHint}>Images</Text>}
               </TouchableOpacity>
             ))}
 
@@ -741,17 +869,31 @@ const s = StyleSheet.create({
   headerSub: { fontSize: 12, color: "#A8D5BA", marginTop: 2 },
   logoutBtn: { marginLeft: "auto" },
   // Dashboard cards
-  cardsWrap: { flexDirection: "row", flexWrap: "wrap", padding: 12 },
-  card: { backgroundColor: "#fff", borderRadius: 14, padding: 16, margin: 6, width: (width - 48) / 2, borderLeftWidth: 4, elevation: 2, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
-  cardIcon: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center", marginBottom: 10 },
-  cardVal: { fontSize: 26, fontWeight: "bold", color: "#135E4B" },
-  cardLabel: { fontSize: 12, color: "#666", marginTop: 4 },
+  dashScroll: { padding: 16, paddingBottom: 40 },
+  sectionHeader: { marginBottom: 12, marginTop: 10 },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#111827" },
+  cardsGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 24 },
+  dashCard: { 
+    width: (width - 44) / 2, backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 12,
+    elevation: 3, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
+  },
+  dashCardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 },
+  cardIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  cardVal: { fontSize: 24, fontWeight: "bold", color: "#111827", alignSelf: "center" },
+  cardLabel: { fontSize: 13, color: "#6B7280", fontWeight: "600" },
+  actionGrid: { marginBottom: 20 },
+  actionIconWrap: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center", marginRight: 16 },
+  actionLabel: { flex: 1, fontSize: 16, fontWeight: "600", color: "#1F2937" },
+  actionArrow: { marginLeft: 10 },
   // List items
   listItem: { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginBottom: 10, flexDirection: "row", alignItems: "center", elevation: 1, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 3, shadowOffset: { width: 0, height: 1 } },
   listTitle: { fontSize: 15, fontWeight: "bold", color: "#135E4B" },
   listSub: { fontSize: 13, color: "#666", marginTop: 2 },
   delBtn: { padding: 8 },
-  actionBtn: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
+  actionBtn: {
+    flexDirection: "row", alignItems: "center", backgroundColor: "#fff", padding: 16, borderRadius: 16, marginBottom: 10,
+    elevation: 2, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
+  },
   badge: { alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, marginTop: 6 },
   badgeGreen: { backgroundColor: "#D1FAE5" },
   badgeYellow: { backgroundColor: "#FEF3C7" },
@@ -788,4 +930,27 @@ const s = StyleSheet.create({
   modalActions: { flexDirection: "row", justifyContent: "flex-end" },
   modalBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, marginLeft: 10 },
   modalBtnText: { color: "#fff", fontWeight: "bold" },
+  // Users Page Styles
+  statsContainer: { paddingVertical: 16, backgroundColor: "#fff", borderBottomWidth: 1, borderColor: "#E5E7EB" },
+  statCard: { backgroundColor: "#F9FAFB", padding: 14, borderRadius: 12, borderLeftWidth: 4, marginRight: 12, width: width * 0.35, elevation: 1, shadowColor: "#000", shadowOpacity: 0.03, shadowRadius: 3, shadowOffset: { width: 0, height: 1 } },
+  statVal: { fontSize: 22, fontWeight: "bold", color: "#1F2937" },
+  statTitle: { fontSize: 12, color: "#6B7280", marginTop: 4, fontWeight: "600" },
+  filters: { padding: 12, paddingHorizontal: 16, backgroundColor: "#F8FAFC", borderBottomWidth: 1, borderColor: "#E5E7EB" },
+  filterChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: "#fff", marginRight: 8, borderWidth: 1, borderColor: "#E2E8F0" },
+  filterChipActive: { backgroundColor: "#135E4B", borderColor: "#135E4B" },
+  filterText: { fontSize: 12, color: "#475569", fontWeight: "bold" },
+  filterTextActive: { color: "#fff" },
+  filterDivider: { width: 1, backgroundColor: "#CBD5E1", marginHorizontal: 8, height: 24, alignSelf: "center" },
+  userCard: { backgroundColor: "#fff", borderRadius: 16, marginBottom: 12, elevation: 2, marginHorizontal: 16, marginTop: 10, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  userCardInner: { flexDirection: "row", padding: 16 },
+  userAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: "#135E4B15", alignItems: "center", justifyContent: "center", marginRight: 16 },
+  userAvatarText: { fontSize: 20, fontWeight: "bold", color: "#135E4B" },
+  userInfo: { flex: 1 },
+  userActions: { alignItems: "flex-end", justifyContent: "space-between" },
+  userName: { fontSize: 16, fontWeight: "bold", color: "#1F2937" },
+  userEmail: { fontSize: 13, color: "#64748B", marginTop: 2 },
+  userPhone: { fontSize: 13, color: "#94A3B8", marginTop: 2 },
+  rolesRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 },
+  roleBadge: { backgroundColor: "#135E4B15", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  roleText: { fontSize: 10, color: "#135E4B", fontWeight: "bold" },
 });
