@@ -43,6 +43,9 @@ app.use("/api/categories", categoryRoutes);
 const complaintRoutes = require("./routes/complaintRoutes");
 app.use("/api/complaints", complaintRoutes);
 
+const providerRoutes = require("./routes/providerRoutes");
+app.use("/api/providers", providerRoutes);
+
 app.get("/", (req, res) => {
   res.send("Fixr API Running 🚀");
 });

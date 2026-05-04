@@ -12,9 +12,11 @@ import {
   Platform,
   Modal,
   FlatList,
+  Image,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
-import { applyProvider } from "../services/authApi";
+import { applyProvider, uploadImage } from "../services/authApi";
 import { getCategories } from "../services/categoryApi";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -29,9 +31,11 @@ const OnboardingScreen = ({ navigation }) => {
     availability: true,
   });
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [categories, setCategories] = useState([]);
   const [catModalVisible, setCatModalVisible] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
 
   React.useEffect(() => {
     const fetchCats = async () => {
@@ -48,6 +52,50 @@ const OnboardingScreen = ({ navigation }) => {
   const handleChange = (key, value) => {
     setDetails((prev) => ({ ...prev, [key]: value }));
     setErrorMsg("");
+  };
+
+  const pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission Required", "Please allow access to your photo library.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (result.canceled) return;
+
+      const asset = result.assets[0];
+      const fileName = (asset.fileName || asset.uri.split("/").pop() || "").toLowerCase();
+
+      // Validate PNG only
+      if (!fileName.endsWith(".png")) {
+        setErrorMsg("Only PNG images are allowed.");
+        return;
+      }
+
+      // Validate under 4MB
+      if (asset.fileSize && asset.fileSize > 4 * 1024 * 1024) {
+        setErrorMsg("Image must be under 4 MB.");
+        return;
+      }
+
+      setErrorMsg("");
+      setUploading(true);
+      const cloudUrl = await uploadImage(asset.uri);
+      setImagePreview(asset.uri);
+      handleChange("image", cloudUrl);
+    } catch (err) {
+      setErrorMsg("Image upload failed: " + err.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -142,15 +190,35 @@ const OnboardingScreen = ({ navigation }) => {
             onChangeText={(text) => handleChange("location", text)}
           />
 
-          <Text style={styles.label}>Profile Image URL (Optional)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="https://example.com/my-photo.jpg"
-            placeholderTextColor="#999"
-            value={details.image}
-            onChangeText={(text) => handleChange("image", text)}
-            autoCapitalize="none"
-          />
+          <Text style={styles.label}>Profile Image (PNG, max 4 MB)</Text>
+          <TouchableOpacity
+            style={styles.imagePicker}
+            onPress={pickImage}
+            disabled={uploading}
+          >
+            {uploading ? (
+              <ActivityIndicator color="#135E4B" />
+            ) : imagePreview || details.image ? (
+              <Image
+                source={{ uri: imagePreview || details.image }}
+                style={styles.imagePreview}
+              />
+            ) : (
+              <View style={styles.imagePickerPlaceholder}>
+                <Ionicons name="cloud-upload-outline" size={32} color="#135E4B" />
+                <Text style={styles.imagePickerText}>Tap to upload PNG</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          {details.image ? (
+            <TouchableOpacity
+              onPress={() => { handleChange("image", ""); setImagePreview(null); }}
+              style={styles.removeImageBtn}
+            >
+              <Ionicons name="close-circle" size={18} color="#EF4444" />
+              <Text style={styles.removeImageText}>Remove Image</Text>
+            </TouchableOpacity>
+          ) : null}
 
           <View style={styles.switchContainer}>
             <Text style={styles.labelSwitch}>Currently Available for Work</Text>
@@ -302,6 +370,46 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: "#E0E0E0",
   },
   pickerButtonText: { fontSize: 14, color: "#000" },
+  imagePicker: {
+    backgroundColor: "#F0F7F4",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    borderStyle: "dashed",
+    marginBottom: 10,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 140,
+  },
+  imagePickerPlaceholder: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 30,
+  },
+  imagePickerText: {
+    color: "#135E4B",
+    marginTop: 8,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  imagePreview: {
+    width: "100%",
+    height: 180,
+    borderRadius: 12,
+  },
+  removeImageBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-end",
+    marginBottom: 15,
+  },
+  removeImageText: {
+    color: "#EF4444",
+    fontSize: 13,
+    marginLeft: 4,
+    fontWeight: "500",
+  },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
   modalContent: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: "50%" },
   modalTitle: { fontSize: 18, fontWeight: "bold", color: "#135E4B", marginBottom: 15, textAlign: "center" },

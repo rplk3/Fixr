@@ -1,5 +1,4 @@
 const User = require("../models/User");
-const Provider = require("../models/Provider");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
@@ -98,47 +97,6 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-// Apply to become a service provider
-exports.applyProvider = async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    if (user.providerStatus !== 'none' && user.providerStatus !== 'rejected') {
-      return res.status(400).json({ message: "You have already applied to be a provider" });
-    }
-
-    const { title, description, category, price, location, availability, image } = req.body;
-
-    if (!title || !description || !category || price === undefined || !location) {
-        return res.status(400).json({ message: "Missing required provider fields" });
-    }
-
-    const newProvider = await Provider.create({
-        user: user._id,
-        title,
-        description,
-        category,
-        price: Number(price),
-        location,
-        availability: availability !== undefined ? availability : true,
-        image: image || ""
-    });
-
-    user.providerStatus = 'pending';
-    await user.save();
-
-    res.status(200).json({
-      message: "Provider application submitted successfully",
-      providerStatus: user.providerStatus,
-      provider: newProvider
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
 
 // Update User Profile
 exports.updateProfile = async (req, res) => {

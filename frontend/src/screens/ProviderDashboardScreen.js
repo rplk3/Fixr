@@ -9,7 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { crossAlert } from "../utils/alert";
 import { getMyServices, updateService, deleteService, createService, displayService } from "../services/serviceApi";
-import { getProviderBookings, updateBookingStatus } from "../services/bookingApi";
+import { getProviderBookings, updateBookingStatus, getProviderEarnings, getProviderReviews } from "../services/bookingApi";
 import { getCategories } from "../services/categoryApi";
 import { getUser, setToken, setUser } from "../services/authApi";
 import { IMAGE_BASE_URL } from "../config/api";
@@ -17,14 +17,23 @@ import { IMAGE_BASE_URL } from "../config/api";
 const { width } = Dimensions.get("window");
 const SIDEBAR_W = width * 0.72;
 
+const TABS = ["services", "bookings", "earnings", "reviews"];
+
 const ProviderDashboardScreen = () => {
   const navigation = useNavigation();
   const [services, setServices] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("services"); // "services" or "bookings"
+  const [activeTab, setActiveTab] = useState("services");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setLocalUser] = useState(null);
+
+  // Earnings & Reviews
+  const [earnings, setEarnings] = useState({ totalEarnings: 0, totalJobs: 0, monthly: [], perService: [] });
+  const [reviewsData, setReviewsData] = useState({ reviews: [], averageRating: 0, totalReviews: 0 });
+
+  // Booking filter
+  const [bookingFilter, setBookingFilter] = useState("all");
 
   // Modal State
   const [modalVisible, setModalVisible] = useState(false);
@@ -43,14 +52,18 @@ const ProviderDashboardScreen = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [servicesData, bookingsData, catsData] = await Promise.all([
+      const [servicesData, bookingsData, catsData, earningsData, reviewsResult] = await Promise.all([
         getMyServices(),
         getProviderBookings(),
-        getCategories()
+        getCategories(),
+        getProviderEarnings().catch(() => ({ totalEarnings: 0, totalJobs: 0, monthly: [], perService: [] })),
+        getProviderReviews().catch(() => ({ reviews: [], averageRating: 0, totalReviews: 0 })),
       ]);
       setServices(servicesData);
       setBookings(bookingsData);
       setCategories(catsData);
+      setEarnings(earningsData);
+      setReviewsData(reviewsResult);
     } catch (e) {
       crossAlert("Error", e.message);
     }
@@ -192,6 +205,36 @@ const ProviderDashboardScreen = () => {
     }
   };
 
+  const handleCloneService = (item) => {
+    if (services.length >= 3) {
+      return crossAlert("Limit Reached", "You can only create a maximum of 3 services.");
+    }
+    crossAlert("Clone Service", `Create a copy of "${item.title}"?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Clone", onPress: async () => {
+          try {
+            await createService({
+              title: `${item.title} (Copy)`,
+              description: item.description,
+              category: item.category,
+              price: item.price,
+              location: item.location,
+              availability: true,
+              image: item.image || "",
+            });
+            crossAlert("Success", "Service cloned successfully!");
+            fetchData();
+          } catch (e) { crossAlert("Error", e.message); }
+        }
+      }
+    ]);
+  };
+
+  const filteredBookings = bookingFilter === "all"
+    ? bookings
+    : bookings.filter(b => b.status === bookingFilter);
+
   const handleSwitchToCustomer = () => {
     setSidebarOpen(false);
     setTimeout(() => {
@@ -242,6 +285,9 @@ const ProviderDashboardScreen = () => {
           <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
             <Text style={st.serviceTitle} numberOfLines={1}>{item.title}</Text>
             <View style={{ flexDirection: "row", gap: 6, marginLeft: 8 }}>
+              <TouchableOpacity style={st.editBtn} onPress={() => handleCloneService(item)}>
+                <Ionicons name="copy-outline" size={18} color="#8B5CF6" />
+              </TouchableOpacity>
               <TouchableOpacity style={st.editBtn} onPress={() => openEdit(item)}>
                 <Ionicons name="create-outline" size={18} color="#3B82F6" />
               </TouchableOpacity>
@@ -447,29 +493,39 @@ const ProviderDashboardScreen = () => {
       <View style={st.statsRow}>
         <View style={st.statCard}>
           <Text style={st.statNumber}>{services.length}</Text>
-          <Text style={st.statLabel}>My Services</Text>
+          <Text style={st.statLabel}>Services</Text>
         </View>
         <View style={st.statCard}>
           <Text style={st.statNumber}>{activeBookingsCount}</Text>
-          <Text style={st.statLabel}>Active Bookings</Text>
+          <Text style={st.statLabel}>Active</Text>
+        </View>
+        <View style={st.statCard}>
+          <Text style={[st.statNumber, { color: "#10B981" }]}>Rs.{earnings.totalEarnings?.toLocaleString() || 0}</Text>
+          <Text style={st.statLabel}>Earned</Text>
+        </View>
+        <View style={st.statCard}>
+          <Text style={[st.statNumber, { color: "#F59E0B" }]}>{reviewsData.averageRating || "—"}</Text>
+          <Text style={st.statLabel}>Rating</Text>
         </View>
       </View>
 
       {/* Tabs */}
-      <View style={st.tabsContainer}>
-        <TouchableOpacity 
-          style={[st.tabBtn, activeTab === "services" && st.tabBtnActive]}
-          onPress={() => setActiveTab("services")}
-        >
-          <Text style={[st.tabBtnText, activeTab === "services" && st.tabBtnTextActive]}>My Services</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[st.tabBtn, activeTab === "bookings" && st.tabBtnActive]}
-          onPress={() => setActiveTab("bookings")}
-        >
-          <Text style={[st.tabBtnText, activeTab === "bookings" && st.tabBtnTextActive]}>Bookings Requests</Text>
-        </TouchableOpacity>
-      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={st.tabsContainer} contentContainerStyle={{ paddingHorizontal: 12 }}>
+        {[
+          { key: "services", label: "My Services" },
+          { key: "bookings", label: "Bookings" },
+          { key: "earnings", label: "Earnings" },
+          { key: "reviews", label: "Reviews" },
+        ].map(t => (
+          <TouchableOpacity
+            key={t.key}
+            style={[st.tabBtn, activeTab === t.key && st.tabBtnActive]}
+            onPress={() => setActiveTab(t.key)}
+          >
+            <Text style={[st.tabBtnText, activeTab === t.key && st.tabBtnTextActive]}>{t.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       {/* Content */}
       {activeTab === "services" ? (
@@ -508,22 +564,36 @@ const ProviderDashboardScreen = () => {
             />
           )}
         </>
-      ) : (
+      ) : activeTab === "bookings" ? (
         <>
           <View style={st.sectionHeader}>
             <Text style={st.sectionTitle}>Booking Requests</Text>
           </View>
+          {/* Booking Filter Chips */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 44, marginBottom: 8 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+            {["all", "pending", "pending_payment", "paid", "completed", "cancelled"].map(f => (
+              <TouchableOpacity
+                key={f}
+                style={[st.filterChip, bookingFilter === f && st.filterChipActive]}
+                onPress={() => setBookingFilter(f)}
+              >
+                <Text style={[st.filterChipText, bookingFilter === f && st.filterChipTextActive]}>
+                  {f === "all" ? "All" : f.replace("_", " ").toUpperCase()}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
           {loading ? (
             <ActivityIndicator size="large" color="#135E4B" style={{ marginTop: 30 }} />
-          ) : bookings.length === 0 ? (
+          ) : filteredBookings.length === 0 ? (
             <View style={st.emptyState}>
               <Ionicons name="calendar-outline" size={60} color="#135E4B" />
-              <Text style={st.emptyTitle}>No booking requests</Text>
-              <Text style={st.emptyDesc}>You have no bookings right now.</Text>
+              <Text style={st.emptyTitle}>No bookings found</Text>
+              <Text style={st.emptyDesc}>{bookingFilter === "all" ? "You have no bookings right now." : "No bookings with this status."}</Text>
             </View>
           ) : (
             <FlatList
-              data={bookings}
+              data={filteredBookings}
               keyExtractor={(item) => item._id}
               renderItem={renderBooking}
               contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
@@ -531,7 +601,94 @@ const ProviderDashboardScreen = () => {
             />
           )}
         </>
-      )}
+      ) : activeTab === "earnings" ? (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchData} />}>
+          {/* Summary Cards */}
+          <View style={{ flexDirection: "row", gap: 10, marginBottom: 20 }}>
+            <View style={[st.earnCard, { flex: 1 }]}>  
+              <Ionicons name="cash-outline" size={24} color="#10B981" />
+              <Text style={st.earnCardValue}>Rs. {earnings.totalEarnings?.toLocaleString() || 0}</Text>
+              <Text style={st.earnCardLabel}>Total Earnings</Text>
+            </View>
+            <View style={[st.earnCard, { flex: 1 }]}>
+              <Ionicons name="briefcase-outline" size={24} color="#3B82F6" />
+              <Text style={st.earnCardValue}>{earnings.totalJobs || 0}</Text>
+              <Text style={st.earnCardLabel}>Completed Jobs</Text>
+            </View>
+          </View>
+
+          {/* Monthly Breakdown */}
+          <Text style={[st.sectionTitle, { marginBottom: 12 }]}>Monthly Breakdown</Text>
+          {earnings.monthly?.length === 0 ? (
+            <Text style={{ color: "#999", textAlign: "center", padding: 20 }}>No earnings data yet</Text>
+          ) : (
+            earnings.monthly?.map((m, i) => (
+              <View key={m.month} style={st.monthRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={st.monthLabel}>{m.month}</Text>
+                  <Text style={st.monthSub}>{m.jobs} job{m.jobs !== 1 ? "s" : ""}</Text>
+                </View>
+                <Text style={st.monthEarnings}>Rs. {m.earnings?.toLocaleString()}</Text>
+                <View style={[st.monthBar, { width: Math.max(8, (m.earnings / (earnings.totalEarnings || 1)) * 80) }]} />
+              </View>
+            ))
+          )}
+
+          {/* Per-Service Breakdown */}
+          {earnings.perService?.length > 0 && (
+            <>
+              <Text style={[st.sectionTitle, { marginTop: 20, marginBottom: 12 }]}>Earnings by Service</Text>
+              {earnings.perService.map((s, i) => (
+                <View key={s.serviceId} style={st.perServiceRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={st.perServiceTitle}>{s.title}</Text>
+                    <Text style={st.perServiceSub}>{s.category} · {s.jobs} job{s.jobs !== 1 ? "s" : ""}</Text>
+                  </View>
+                  <Text style={st.perServiceEarnings}>Rs. {s.earnings?.toLocaleString()}</Text>
+                </View>
+              ))}
+            </>
+          )}
+        </ScrollView>
+      ) : activeTab === "reviews" ? (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchData} />}>
+          {/* Rating Summary */}
+          <View style={st.ratingSummary}>
+            <Text style={st.ratingBig}>{reviewsData.averageRating || "0.0"}</Text>
+            <View style={{ flexDirection: "row", marginVertical: 6 }}>
+              {[1, 2, 3, 4, 5].map(s => (
+                <Ionicons key={s} name={s <= Math.round(reviewsData.averageRating) ? "star" : "star-outline"} size={22} color="#F59E0B" />
+              ))}
+            </View>
+            <Text style={st.ratingCount}>{reviewsData.totalReviews} review{reviewsData.totalReviews !== 1 ? "s" : ""}</Text>
+          </View>
+
+          {/* Review List */}
+          {reviewsData.reviews?.length === 0 ? (
+            <View style={st.emptyState}>
+              <Ionicons name="chatbubbles-outline" size={60} color="#135E4B" />
+              <Text style={st.emptyTitle}>No reviews yet</Text>
+              <Text style={st.emptyDesc}>Customer reviews will appear here</Text>
+            </View>
+          ) : (
+            reviewsData.reviews.map((r) => (
+              <View key={r._id} style={st.reviewCard}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+                  <Text style={st.reviewerName}>{r.customer?.firstName} {r.customer?.lastName}</Text>
+                  <View style={{ flexDirection: "row" }}>
+                    {[1, 2, 3, 4, 5].map(s => (
+                      <Ionicons key={s} name={s <= r.rating ? "star" : "star-outline"} size={14} color="#F59E0B" />
+                    ))}
+                  </View>
+                </View>
+                <Text style={st.reviewService}>{r.service?.title || "Service"}</Text>
+                <Text style={st.reviewComment}>{r.comment}</Text>
+                <Text style={st.reviewDate}>{new Date(r.createdAt).toLocaleDateString()}</Text>
+              </View>
+            ))
+          )}
+        </ScrollView>
+      ) : null}
 
       {/* Add/Edit Modal */}
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
@@ -597,7 +754,7 @@ const ProviderDashboardScreen = () => {
             {/* Profile Section */}
             <View style={st.sidebarProfile}>
               <View style={st.avatarCircle}>
-                {user?.profileImage ? (
+                {user?.profileImage && (user.profileImage.startsWith("http") || user.profileImage.startsWith("/uploads")) ? (
                   <Image source={{ uri: user.profileImage.startsWith('/uploads') ? `${IMAGE_BASE_URL}${user.profileImage}` : user.profileImage }} style={{ width: 64, height: 64, borderRadius: 32 }} />
                 ) : (
                   <Ionicons name="person" size={36} color="#fff" />
@@ -688,16 +845,16 @@ const st = StyleSheet.create({
   switchButtonText: { color: "#fff", fontWeight: "bold", fontSize: 13, marginLeft: 6 },
   statsRow: { flexDirection: "row", padding: 16, gap: 10 },
   statCard: {
-    flex: 1, backgroundColor: "#fff", padding: 18, borderRadius: 14, alignItems: "center",
+    flex: 1, backgroundColor: "#fff", padding: 12, borderRadius: 14, alignItems: "center",
     elevation: 2, shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
   },
-  statNumber: { fontSize: 24, fontWeight: "bold", color: "#135E4B", marginBottom: 4 },
-  statLabel: { fontSize: 13, color: "#666" },
+  statNumber: { fontSize: 16, fontWeight: "bold", color: "#135E4B", marginBottom: 2 },
+  statLabel: { fontSize: 11, color: "#666" },
   tabsContainer: {
-    flexDirection: "row", marginHorizontal: 16, marginBottom: 16, backgroundColor: "#E0ECEB",
-    borderRadius: 10, padding: 4
+    marginBottom: 16, backgroundColor: "#E0ECEB",
+    borderRadius: 10, marginHorizontal: 16, padding: 4, maxHeight: 48,
   },
-  tabBtn: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 8 },
+  tabBtn: { paddingVertical: 10, paddingHorizontal: 16, alignItems: "center", borderRadius: 8, marginRight: 2 },
   tabBtnActive: { backgroundColor: "#fff", elevation: 1 },
   tabBtnText: { fontSize: 14, fontWeight: "600", color: "#666" },
   tabBtnTextActive: { color: "#135E4B" },
@@ -849,4 +1006,51 @@ const st = StyleSheet.create({
   },
   sidebarLabel: { fontSize: 15, color: "#fff", marginLeft: 12, fontWeight: "500" },
   sidebarDivider: { height: 1, backgroundColor: "rgba(168,213,186,0.2)", marginVertical: 6, marginHorizontal: 16 },
+  // Booking Filter Chips
+  filterChip: {
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+    backgroundColor: "#E0ECEB", marginRight: 2,
+  },
+  filterChipActive: { backgroundColor: "#135E4B" },
+  filterChipText: { fontSize: 12, fontWeight: "600", color: "#555" },
+  filterChipTextActive: { color: "#fff" },
+  // Earnings
+  earnCard: {
+    backgroundColor: "#fff", borderRadius: 16, padding: 18, alignItems: "center",
+    elevation: 2, shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
+  },
+  earnCardValue: { fontSize: 20, fontWeight: "bold", color: "#135E4B", marginTop: 8 },
+  earnCardLabel: { fontSize: 12, color: "#666", marginTop: 4 },
+  monthRow: {
+    flexDirection: "row", alignItems: "center", backgroundColor: "#fff",
+    borderRadius: 12, padding: 14, marginBottom: 8,
+    elevation: 1, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 3,
+  },
+  monthLabel: { fontSize: 14, fontWeight: "700", color: "#135E4B" },
+  monthSub: { fontSize: 11, color: "#999", marginTop: 2 },
+  monthEarnings: { fontSize: 15, fontWeight: "bold", color: "#10B981", marginRight: 10 },
+  monthBar: { height: 6, backgroundColor: "#10B981", borderRadius: 3 },
+  perServiceRow: {
+    flexDirection: "row", alignItems: "center", backgroundColor: "#fff",
+    borderRadius: 12, padding: 14, marginBottom: 8,
+    elevation: 1, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 3,
+  },
+  perServiceTitle: { fontSize: 14, fontWeight: "700", color: "#135E4B" },
+  perServiceSub: { fontSize: 11, color: "#999", marginTop: 2 },
+  perServiceEarnings: { fontSize: 15, fontWeight: "bold", color: "#3B82F6" },
+  // Reviews
+  ratingSummary: {
+    backgroundColor: "#fff", borderRadius: 16, padding: 24, alignItems: "center",
+    marginBottom: 20, elevation: 2, shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 4,
+  },
+  ratingBig: { fontSize: 48, fontWeight: "bold", color: "#135E4B" },
+  ratingCount: { fontSize: 14, color: "#666" },
+  reviewCard: {
+    backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10,
+    elevation: 1, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 3,
+  },
+  reviewerName: { fontSize: 14, fontWeight: "700", color: "#135E4B" },
+  reviewService: { fontSize: 12, color: "#4CB572", fontWeight: "500", marginBottom: 6 },
+  reviewComment: { fontSize: 13, color: "#555", lineHeight: 19 },
+  reviewDate: { fontSize: 11, color: "#999", marginTop: 8, textAlign: "right" },
 });

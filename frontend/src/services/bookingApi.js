@@ -67,3 +67,27 @@ export const createPayment = async (paymentData) => {
   if (!response.ok) throw new Error(data.message || "Payment failed");
   return data;
 };
+
+export const getProviderEarnings = async () => {
+  const response = await fetch(`${BASE_URL}/bookings/provider/earnings`, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getToken()}`,
+    },
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to fetch earnings");
+  return data;
+};
+
+export const getProviderReviews = async () => {
+  const response = await fetch(`${BASE_URL}/bookings/provider/reviews`, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getToken()}`,
+    },
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to fetch reviews");
+  return data;
+};

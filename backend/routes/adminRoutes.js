@@ -14,9 +14,6 @@ const {
   getBookingById,
   updateBookingStatus,
   deleteBooking,
-  getAllProviders,
-  updateProviderStatus,
-  deleteProvider,
   getAllPayments,
   getPaymentById,
   updatePaymentStatus,
@@ -25,6 +22,7 @@ const {
   deleteReview,
   getAllUsers,
 } = require("../controllers/adminController");
+const { getAllProviders, updateProviderStatus, deleteProvider } = require("../controllers/providerController");
 
 // All admin routes require protect + adminOnly
 router.use(protect, adminOnly);

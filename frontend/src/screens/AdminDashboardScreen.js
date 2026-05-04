@@ -22,6 +22,7 @@ const SIDEBAR_W = width * 0.7;
 const MENU = [
   { key: "dashboard", label: "Dashboard", icon: "grid-outline" },
   { key: "users", label: "Manage Users", icon: "people-outline" },
+  { key: "providers", label: "Providers", icon: "briefcase-outline" },
   { key: "services", label: "Services", icon: "construct-outline" },
   { key: "bookings", label: "Bookings", icon: "calendar-outline" },
   { key: "payments", label: "Payments", icon: "card-outline" },
@@ -31,6 +32,7 @@ const MENU = [
 const SUBTITLES = {
   dashboard: "Overview",
   users: "User Administration",
+  providers: "Provider Applications",
   services: "Service Management",
   bookings: "Appointments",
   payments: "Financial Records",
@@ -42,6 +44,7 @@ const DashboardPage = ({ stats, loading, onRefresh, selectPage }) => {
   const cards = [
     { label: "Total Users", value: stats.totalUsers, icon: "people", color: "#3B82F6" },
     { label: "Providers", value: stats.totalProviders, icon: "briefcase", color: "#8B5CF6" },
+    { label: "Pending Providers", value: stats.pendingProviders, icon: "time", color: "#F59E0B" },
     { label: "Services", value: stats.totalServices, icon: "construct", color: "#10B981" },
     { label: "Bookings", value: stats.totalBookings, icon: "calendar", color: "#EC4899" },
     { label: "Payments", value: stats.totalPayments || 0, icon: "card", color: "#14B8A6" },
@@ -50,6 +53,7 @@ const DashboardPage = ({ stats, loading, onRefresh, selectPage }) => {
 
   const quickActions = [
     { key: "users", label: "Manage Users", icon: "people-outline", color: "#3B82F6" },
+    { key: "providers", label: "Provider Applications", icon: "briefcase-outline", color: "#8B5CF6" },
     { key: "services", label: "Manage Services", icon: "construct-outline", color: "#10B981" },
     { key: "bookings", label: "Manage Bookings", icon: "calendar-outline", color: "#EC4899" },
     { key: "payments", label: "Manage Payments", icon: "card-outline", color: "#14B8A6" },
@@ -288,6 +292,11 @@ const AdminDashboardScreen = ({ navigation }) => {
       load(page);
     }, [page, load])
   );
+
+  // Also load data when page changes (useFocusEffect only fires on screen focus)
+  React.useEffect(() => {
+    load(page);
+  }, [page, load]);
 
   const selectPage = (key) => { 
     setPage(key); 
@@ -754,6 +763,7 @@ const AdminDashboardScreen = ({ navigation }) => {
                 <Ionicons name={m.icon} size={20} color={page === m.key ? "#fff" : "#A8D5BA"} />
                 <Text style={[s.sidebarLabel, page === m.key && s.sidebarLabelActive]}>{m.label}</Text>
                 {m.key === "users" && <Text style={s.sidebarHint}>User Administration</Text>}
+                {m.key === "providers" && <Text style={s.sidebarHint}>Provider Applications</Text>}
                 {m.key === "services" && <Text style={s.sidebarHint}>Service Management</Text>}
                 {m.key === "bookings" && <Text style={s.sidebarHint}>Appointments</Text>}
                 {m.key === "payments" && <Text style={s.sidebarHint}>Financial Records</Text>}

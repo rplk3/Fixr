@@ -192,63 +192,8 @@ exports.deleteBooking = async (req, res) => {
 };
 
 // ──────────────────────────────────────────────
-// PROVIDERS / WORKER PROFILES
+// PROVIDERS — moved to ../controllers/providerController.js
 // ──────────────────────────────────────────────
-exports.getAllProviders = async (req, res) => {
-  try {
-    const providers = await safeFind(Provider, {}, { path: "user", select: "firstName lastName email providerStatus" }, { createdAt: -1 });
-    res.status(200).json(providers);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-exports.updateProviderStatus = async (req, res) => {
-  try {
-    const { status } = req.body; // 'approved' or 'rejected'
-    if (!["approved", "rejected"].includes(status)) {
-      return res.status(400).json({ message: "Invalid status. Use 'approved' or 'rejected'" });
-    }
-
-    const provider = await Provider.findById(req.params.id);
-    if (!provider) return res.status(404).json({ message: "Provider not found" });
-
-    const user = await User.findById(provider.user);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    user.providerStatus = status;
-    if (status === "approved" && !user.roles.includes("provider")) {
-      user.roles.push("provider");
-    }
-    if (status === "rejected") {
-      user.roles = user.roles.filter((r) => r !== "provider");
-    }
-    await user.save();
-
-    res.status(200).json({ message: `Provider ${status}`, providerStatus: status });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-exports.deleteProvider = async (req, res) => {
-  try {
-    const provider = await Provider.findById(req.params.id);
-    if (!provider) return res.status(404).json({ message: "Provider not found" });
-
-    const user = await User.findById(provider.user);
-    if (user) {
-      user.roles = user.roles.filter((r) => r !== "provider");
-      user.providerStatus = "none";
-      await user.save();
-    }
-
-    await provider.deleteOne();
-    res.status(200).json({ message: "Provider deleted" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
 
 // ──────────────────────────────────────────────
 // PAYMENTS / FINANCIAL RECORDS

@@ -285,7 +285,7 @@ const ServicesListScreen = () => {
             {/* Profile */}
             <View style={styles.sidebarProfile}>
               <View style={styles.avatarCircle}>
-                {user?.profileImage ? (
+                {user?.profileImage && (user.profileImage.startsWith("http") || user.profileImage.startsWith("/uploads")) ? (
                   <Image
                     source={{
                       uri: user.profileImage.startsWith("/uploads")
