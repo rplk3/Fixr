@@ -140,26 +140,36 @@ const UsersPage = ({ users, loading, onRefresh, navigation }) => {
 
   return (
     <View style={{ flex: 1 }}>
+      {/* Stats Overview */}
       <View style={s.statsContainer}>
         <Text style={[s.sectionTitle, { marginHorizontal: 16, marginBottom: 12 }]}>User Overview</Text>
         <FlatList
           data={[
-            { title: "Total Users", val: stats.total, color: "#3B82F6" },
-            { title: "Active", val: stats.active, color: "#10B981" },
-            { title: "Suspended", val: stats.suspended, color: "#EF4444" },
-            { title: "Customers", val: stats.customers, color: "#8B5CF6" },
-            { title: "Providers", val: stats.providers, color: "#F59E0B" },
-            { title: "Pending Prov.", val: stats.pendingProviders, color: "#EC4899" },
-            { title: "Admins", val: stats.admins, color: "#6366F1" },
+            { title: "Total Users", val: stats.total, color: "#3B82F6", icon: "people-outline" },
+            { title: "Active", val: stats.active, color: "#10B981", icon: "checkmark-circle-outline" },
+            { title: "Suspended", val: stats.suspended, color: "#EF4444", icon: "ban-outline" },
+            { title: "Customers", val: stats.customers, color: "#8B5CF6", icon: "person-outline" },
+            { title: "Providers", val: stats.providers, color: "#F59E0B", icon: "construct-outline" },
+            { title: "Pending Prov.", val: stats.pendingProviders, color: "#EC4899", icon: "time-outline" },
+            { title: "Admins", val: stats.admins, color: "#6366F1", icon: "shield-checkmark-outline" },
           ]}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16 }}
           keyExtractor={item => item.title}
-          renderItem={({ item }) => renderStatCard(item.title, item.val, item.color)}
+          renderItem={({ item }) => (
+            <View style={[s.statCard, { borderLeftColor: item.color }]}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                <Ionicons name={item.icon} size={18} color={item.color} />
+              </View>
+              <Text style={s.statVal}>{item.val}</Text>
+              <Text style={s.statTitle}>{item.title}</Text>
+            </View>
+          )}
         />
       </View>
 
+      {/* Search Bar */}
       <View style={s.searchSection}>
         <View style={s.searchBar}>
           <Ionicons name="search-outline" size={20} color="#94A3B8" />
@@ -178,50 +188,67 @@ const UsersPage = ({ users, loading, onRefresh, navigation }) => {
         </View>
       </View>
 
-      <View style={s.filters}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      {/* Filter Pills */}
+      <View style={s.umFilterSection}>
+        <Text style={s.bkFilterLabel}>Role</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
           {["all", "customer", "provider", "admin"].map(role => (
-            <TouchableOpacity key={role} style={[s.filterChip, filterRole === role && s.filterChipActive]} onPress={() => setFilterRole(role)}>
-              <Text style={[s.filterText, filterRole === role && s.filterTextActive]}>{role.toUpperCase()}</Text>
+            <TouchableOpacity key={role} style={[s.bkPill, filterRole === role && s.bkPillActive]} onPress={() => setFilterRole(role)}>
+              <Text style={[s.bkPillText, filterRole === role && s.bkPillTextActive]}>{role.toUpperCase()}</Text>
             </TouchableOpacity>
           ))}
-          <View style={s.filterDivider} />
+        </ScrollView>
+        <Text style={s.bkFilterLabel}>Status</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {["all", "active", "suspended", "pendingProvider"].map(status => (
-            <TouchableOpacity key={status} style={[s.filterChip, filterStatus === status && s.filterChipActive]} onPress={() => setFilterStatus(status)}>
-              <Text style={[s.filterText, filterStatus === status && s.filterTextActive]}>{status.toUpperCase()}</Text>
+            <TouchableOpacity key={status} style={[s.bkPill, filterStatus === status && s.bkPillActive]} onPress={() => setFilterStatus(status)}>
+              <Text style={[s.bkPillText, filterStatus === status && s.bkPillTextActive]}>{status === "pendingProvider" ? "PENDING PROV." : status.toUpperCase()}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
+
+      {/* User List */}
       <ListPage data={filtered} loading={loading} onRefresh={onRefresh} emptyMsg="No users found"
         renderItem={({ item }) => (
-          <TouchableOpacity style={s.userCard} onPress={() => navigation.navigate("AdminUserDetails", { userId: item._id })} activeOpacity={0.7}>
-            <View style={s.userCardInner}>
-              <View style={s.userAvatar}>
-                <Text style={s.userAvatarText}>{(item.firstName?.charAt(0) || "U").toUpperCase()}</Text>
+          <TouchableOpacity style={s.umCard} onPress={() => navigation.navigate("AdminUserDetails", { userId: item._id })} activeOpacity={0.7}>
+            {/* Top: Status + Chevron */}
+            <View style={s.bkCardTopRow}>
+              <View style={[s.provBadge, { backgroundColor: item.isActive ? "#10B98115" : "#EF444415" }]}>
+                <View style={[s.provBadgeDot, { backgroundColor: item.isActive ? "#10B981" : "#EF4444" }]} />
+                <Text style={[s.provBadgeText, { color: item.isActive ? "#10B981" : "#EF4444" }]}>{item.isActive ? "ACTIVE" : "SUSPENDED"}</Text>
               </View>
-              
-              <View style={s.userInfo}>
-                <Text style={s.userName}>{item.firstName} {item.lastName}</Text>
-                <Text style={s.userEmail}>{item.email}</Text>
-                {item.phone ? <Text style={s.userPhone}>{item.phone}</Text> : null}
-                
-                <View style={s.rolesRow}>
-                  {item.roles?.map(r => (
-                    <View key={r} style={s.roleBadge}><Text style={s.roleText}>{r.toUpperCase()}</Text></View>
-                  ))}
-                  {item.providerStatus && item.providerStatus !== "none" && (
-                    <View style={[s.roleBadge, { backgroundColor: "#F59E0B20" }]}><Text style={[s.roleText, { color: "#D97706" }]}>PROV: {item.providerStatus.toUpperCase()}</Text></View>
-                  )}
-                </View>
-              </View>
+              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+            </View>
 
-              <View style={s.userActions}>
-                <View style={[s.badge, { backgroundColor: item.isActive ? "#10B98120" : "#EF444420", marginTop: 0 }]}>
-                  <Text style={[s.badgeText, { color: item.isActive ? "#10B981" : "#EF4444" }]}>{item.isActive ? "ACTIVE" : "SUSP"}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color="#CBD5E1" style={{ marginTop: 16 }} />
+            {/* Avatar + Info */}
+            <View style={s.provHeader}>
+              <View style={s.provAvatar}>
+                <Text style={s.provAvatarText}>{(item.firstName?.charAt(0) || "U").toUpperCase()}</Text>
               </View>
+              <View style={s.provInfo}>
+                <Text style={s.provName}>{item.firstName} {item.lastName}</Text>
+                <Text style={s.provEmail}>{item.email}</Text>
+                {item.phone ? <Text style={{ fontSize: 12, color: "#94A3B8", marginTop: 1 }}>{item.phone}</Text> : null}
+              </View>
+            </View>
+
+            <View style={s.provDivider} />
+
+            {/* Roles & Provider Status */}
+            <View style={s.provChipRow}>
+              {item.roles?.map(r => (
+                <View key={r} style={s.provChip}>
+                  <Ionicons name={r === "admin" ? "shield-checkmark-outline" : r === "provider" ? "construct-outline" : "person-outline"} size={12} color="#135E4B" />
+                  <Text style={s.provChipText}>{r.toUpperCase()}</Text>
+                </View>
+              ))}
+              {item.providerStatus && item.providerStatus !== "none" && (
+                <View style={[s.provChip, { borderColor: "#FDE68A", backgroundColor: "#FFFBEB" }]}>
+                  <Ionicons name="time-outline" size={12} color="#D97706" />
+                  <Text style={[s.provChipText, { color: "#D97706" }]}>PROV: {item.providerStatus.toUpperCase()}</Text>
+                </View>
+              )}
             </View>
           </TouchableOpacity>
         )}
@@ -461,42 +488,95 @@ const AdminDashboardScreen = ({ navigation }) => {
 
             {serviceTab === "services" ? (
               <ListPage data={services} loading={loading} onRefresh={() => load("services")} emptyMsg="No services yet"
-                renderItem={({ item }) => (
-                  <View style={s.listItem}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.listTitle}>{item.title}</Text>
-                      <Text style={s.listSub}>{item.category} · LKR {item.price}</Text>
-                      <Text style={s.listSub}>{item.location}</Text>
+                renderItem={({ item }) => {
+                  const sStatus = item.status || "approved";
+                  const vis = item.visibilityStatus || "visible";
+                  return (
+                    <View style={s.svcCard}>
+                      {/* Top: Status + Visibility + Actions */}
+                      <View style={s.svcCardTopRow}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                          <View style={[s.provBadge, sStatus === "approved" ? s.provBadgeGreen : sStatus === "rejected" ? s.provBadgeRed : s.provBadgeYellow]}>
+                            <View style={[s.provBadgeDot, { backgroundColor: sStatus === "approved" ? "#10B981" : sStatus === "rejected" ? "#EF4444" : "#F59E0B" }]} />
+                            <Text style={[s.provBadgeText, { color: sStatus === "approved" ? "#10B981" : sStatus === "rejected" ? "#EF4444" : "#D97706" }]}>{sStatus.toUpperCase()}</Text>
+                          </View>
+                          <View style={[s.provBadge, { backgroundColor: vis === "visible" ? "#DBEAFE" : "#F3F4F6" }]}>
+                            <Ionicons name={vis === "visible" ? "eye-outline" : "eye-off-outline"} size={10} color={vis === "visible" ? "#2563EB" : "#6B7280"} />
+                            <Text style={[s.provBadgeText, { color: vis === "visible" ? "#2563EB" : "#6B7280", marginLeft: 4 }]}>{vis.toUpperCase()}</Text>
+                          </View>
+                        </View>
+                        <View style={{ flexDirection: "row", alignItems: "center" }}>
+                          <TouchableOpacity onPress={() => openEditService(item)} style={s.svcIconBtn}>
+                            <Ionicons name="create-outline" size={18} color="#3B82F6" />
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => handleDeleteService(item._id)} style={s.svcIconBtn}>
+                            <Ionicons name="trash-outline" size={18} color="#9CA3AF" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      {/* Title + Provider */}
+                      <Text style={s.svcTitle}>{item.title}</Text>
+                      <Text style={s.svcProvider}>{item.provider?.firstName ? `${item.provider.firstName} ${item.provider.lastName || ""}` : "Unknown Provider"}</Text>
+
+                      <View style={s.provDivider} />
+
+                      {/* Details chips */}
+                      <View style={s.provChipRow}>
+                        <View style={s.provChip}>
+                          <Ionicons name="pricetag-outline" size={12} color="#135E4B" />
+                          <Text style={s.provChipText}>{item.category}</Text>
+                        </View>
+                        <View style={s.provChip}>
+                          <Ionicons name="cash-outline" size={12} color="#135E4B" />
+                          <Text style={s.provChipText}><Text style={{ fontWeight: "700", color: "#135E4B" }}>LKR</Text> {item.price}</Text>
+                        </View>
+                        <View style={s.provChip}>
+                          <Ionicons name="location-outline" size={12} color="#135E4B" />
+                          <Text style={s.provChipText} numberOfLines={1}>{item.location}</Text>
+                        </View>
+                      </View>
                     </View>
-                    <TouchableOpacity onPress={() => openEditService(item)} style={s.editBtn}>
-                      <Ionicons name="create-outline" size={20} color="#3B82F6" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleDeleteService(item._id)} style={s.delBtn}>
-                      <Ionicons name="trash-outline" size={20} color="#EF4444" />
-                    </TouchableOpacity>
-                  </View>
-                )}
+                  );
+                }}
               />
             ) : serviceTab === "pending" ? (
               <ListPage data={pendingServices} loading={loading} onRefresh={() => load("services")} emptyMsg="No pending updates"
                 renderItem={({ item }) => (
-                  <View style={s.listItem}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.listTitle}>{item.pendingEdits?.title || item.title}</Text>
-                      <Text style={s.listSub}>Original: {item.title}</Text>
-                      {item.pendingEdits && (
-                        <Text style={{ fontSize: 12, color: "#D97706", marginTop: 4 }}>
-                          Proposed Changes: {Object.keys(item.pendingEdits).join(", ")}
-                        </Text>
-                      )}
-                      <Text style={[s.listSub, { marginTop: 4 }]}>Provider ID: {item.provider?.firstName || item.provider}</Text>
+                  <View style={s.svcCard}>
+                    {/* Pending badge */}
+                    <View style={s.svcCardTopRow}>
+                      <View style={[s.provBadge, s.provBadgeYellow]}>
+                        <View style={[s.provBadgeDot, { backgroundColor: "#F59E0B" }]} />
+                        <Text style={[s.provBadgeText, { color: "#D97706" }]}>PENDING REVIEW</Text>
+                      </View>
                     </View>
-                    <TouchableOpacity onPress={() => handleApproveService(item._id)} style={[s.editBtn, { backgroundColor: "#D1FAE5" }]}>
-                      <Ionicons name="checkmark-outline" size={20} color="#059669" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => { setRejSvcId(item._id); setRejReason(""); setRejModalOpen(true); }} style={s.delBtn}>
-                      <Ionicons name="close-outline" size={20} color="#EF4444" />
-                    </TouchableOpacity>
+
+                    {/* Proposed title */}
+                    <Text style={s.svcTitle}>{item.pendingEdits?.title || item.title}</Text>
+                    <Text style={s.svcProvider}>Original: {item.title}</Text>
+
+                    {/* Changes list */}
+                    {item.pendingEdits && (
+                      <View style={s.svcChangesBox}>
+                        <Ionicons name="document-text-outline" size={14} color="#D97706" />
+                        <Text style={s.svcChangesText}>Changes: {Object.keys(item.pendingEdits).join(", ")}</Text>
+                      </View>
+                    )}
+
+                    <Text style={[s.svcProvider, { marginTop: 4 }]}>By: {item.provider?.firstName || "Provider"}</Text>
+
+                    {/* Action Row */}
+                    <View style={s.provActionRow}>
+                      <TouchableOpacity style={[s.provActionBtn, s.provActionReject]} onPress={() => { setRejSvcId(item._id); setRejReason(""); setRejModalOpen(true); }}>
+                        <Ionicons name="close-circle-outline" size={16} color="#EF4444" />
+                        <Text style={s.provActionTextReject}>Reject</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[s.provActionBtn, s.provActionApprove]} onPress={() => handleApproveService(item._id)}>
+                        <Ionicons name="checkmark-circle-outline" size={16} color="#fff" />
+                        <Text style={s.provActionTextApprove}>Approve</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 )}
               />
@@ -511,16 +591,21 @@ const AdminDashboardScreen = ({ navigation }) => {
                 </TouchableOpacity>
                 <ListPage data={categories} loading={loading} onRefresh={() => load("services")} emptyMsg="No categories yet"
                   renderItem={({ item }) => (
-                    <View style={s.listItem}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={s.listTitle}>{item.name}</Text>
+                    <View style={s.svcCatCard}>
+                      <View style={s.svcCatLeft}>
+                        <View style={s.svcCatIcon}>
+                          <Ionicons name="folder-outline" size={20} color="#135E4B" />
+                        </View>
+                        <Text style={s.svcCatName}>{item.name}</Text>
                       </View>
-                      <TouchableOpacity onPress={() => { setEditingCatId(item._id); setCatName(item.name); setCatModalOpen(true); }} style={s.editBtn}>
-                        <Ionicons name="pencil-outline" size={20} color="#3B82F6" />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleDeleteCategory(item._id)} style={s.delBtn}>
-                        <Ionicons name="trash-outline" size={20} color="#EF4444" />
-                      </TouchableOpacity>
+                      <View style={{ flexDirection: "row", alignItems: "center" }}>
+                        <TouchableOpacity onPress={() => { setEditingCatId(item._id); setCatName(item.name); setCatModalOpen(true); }} style={s.svcIconBtn}>
+                          <Ionicons name="pencil-outline" size={18} color="#3B82F6" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => handleDeleteCategory(item._id)} style={s.svcIconBtn}>
+                          <Ionicons name="trash-outline" size={18} color="#9CA3AF" />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   )}
                 />
@@ -539,42 +624,40 @@ const AdminDashboardScreen = ({ navigation }) => {
 
         return (
           <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", gap: 10, marginBottom: 12 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>Status Filter</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                  {["all", "pending", "pending_payment", "paid", "completed", "cancelled"].map(status => (
-                    <TouchableOpacity
-                      key={status}
-                      style={[s.subTab, bookingStatusFilter === status && s.subTabActive, { paddingVertical: 6, paddingHorizontal: 12 }]}
-                      onPress={() => setBookingStatusFilter(status)}
-                    >
-                      <Text style={[s.subTabText, bookingStatusFilter === status && s.subTabTextActive, { fontSize: 13 }]}>
-                        {status.replace("_", " ").toUpperCase()}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
+            {/* Status Filter Pills */}
+            <View style={s.bkFilterSection}>
+              <Text style={s.bkFilterLabel}>Status</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 16 }}>
+                {["all", "pending", "pending_payment", "paid", "completed", "cancelled"].map(status => (
+                  <TouchableOpacity
+                    key={status}
+                    style={[s.bkPill, bookingStatusFilter === status && s.bkPillActive]}
+                    onPress={() => setBookingStatusFilter(status)}
+                  >
+                    <Text style={[s.bkPillText, bookingStatusFilter === status && s.bkPillTextActive]}>
+                      {status.replace("_", " ").toUpperCase()}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
 
-            <View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>Payment Filter</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                  {["all", "pending", "paid", "failed", "refunded"].map(pStatus => (
-                    <TouchableOpacity
-                      key={pStatus}
-                      style={[s.subTab, bookingPaymentFilter === pStatus && s.subTabActive, { paddingVertical: 6, paddingHorizontal: 12 }]}
-                      onPress={() => setBookingPaymentFilter(pStatus)}
-                    >
-                      <Text style={[s.subTabText, bookingPaymentFilter === pStatus && s.subTabTextActive, { fontSize: 13 }]}>
-                        {pStatus.toUpperCase()}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
+            {/* Payment Filter Pills */}
+            <View style={[s.bkFilterSection, { marginBottom: 8 }]}>
+              <Text style={s.bkFilterLabel}>Payment</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 16 }}>
+                {["all", "pending", "paid", "failed", "refunded"].map(pStatus => (
+                  <TouchableOpacity
+                    key={pStatus}
+                    style={[s.bkPill, bookingPaymentFilter === pStatus && s.bkPillActive]}
+                    onPress={() => setBookingPaymentFilter(pStatus)}
+                  >
+                    <Text style={[s.bkPillText, bookingPaymentFilter === pStatus && s.bkPillTextActive]}>
+                      {pStatus.toUpperCase()}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
 
             <ListPage data={filteredBookings} loading={loading} onRefresh={() => load("bookings")} emptyMsg="No bookings found"
@@ -582,52 +665,71 @@ const AdminDashboardScreen = ({ navigation }) => {
                 const bStatus = item.status || "pending";
                 const pStatus = item.paymentStatus || ((bStatus === "paid" || bStatus === "completed") ? "paid" : "pending");
                 
-                const getPColor = (ps) => {
-                  if (ps === "paid") return s.badgeGreen;
-                  if (ps === "failed") return s.badgeRed;
-                  if (ps === "refunded") return { backgroundColor: "#8B5CF6" };
-                  return s.badgeYellow;
-                };
+                const bkStatusColor = bStatus === "completed" ? "#10B981" : bStatus === "cancelled" ? "#EF4444" : bStatus === "paid" ? "#2563EB" : "#F59E0B";
+                const bkStatusBg = bStatus === "completed" ? "#10B98115" : bStatus === "cancelled" ? "#EF444415" : bStatus === "paid" ? "#2563EB15" : "#F59E0B15";
+                const payColor = pStatus === "paid" ? "#10B981" : pStatus === "failed" ? "#EF4444" : pStatus === "refunded" ? "#8B5CF6" : "#F59E0B";
+                const payBg = pStatus === "paid" ? "#10B98115" : pStatus === "failed" ? "#EF444415" : pStatus === "refunded" ? "#8B5CF615" : "#F59E0B15";
                 
                 return (
                   <TouchableOpacity 
-                    style={[s.listItem, { paddingVertical: 16 }]}
+                    style={s.bkCard}
                     onPress={() => navigation.navigate("AdminBookingDetails", { bookingId: item._id })}
+                    activeOpacity={0.7}
                   >
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                        <Text style={[s.listTitle, { flex: 1, marginRight: 8 }]} numberOfLines={1}>
-                          {item.service?.title || "Unknown Service"}
-                        </Text>
-                        <Text style={{ fontSize: 12, color: "#6B7280" }}>{item.date} {item.time}</Text>
-                      </View>
-                      
-                      <View style={{ flexDirection: "row", marginBottom: 6 }}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ fontSize: 12, color: "#6B7280" }}>Customer</Text>
-                          <Text style={{ fontSize: 14, color: "#374151", fontWeight: "500" }}>
-                            {item.customer?.firstName} {item.customer?.lastName}
-                          </Text>
+                    {/* Top: Badges */}
+                    <View style={s.bkCardTopRow}>
+                      <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
+                        <View style={[s.provBadge, { backgroundColor: bkStatusBg, marginRight: 8, marginBottom: 4 }]}>
+                          <View style={[s.provBadgeDot, { backgroundColor: bkStatusColor }]} />
+                          <Text style={[s.provBadgeText, { color: bkStatusColor }]}>{bStatus.replace("_", " ").toUpperCase()}</Text>
                         </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ fontSize: 12, color: "#6B7280" }}>Provider</Text>
-                          <Text style={{ fontSize: 14, color: "#374151", fontWeight: "500" }}>
-                            {item.provider?.firstName} {item.provider?.lastName}
-                          </Text>
+                        <View style={[s.provBadge, { backgroundColor: payBg, marginBottom: 4 }]}>
+                          <Ionicons name="card-outline" size={10} color={payColor} />
+                          <Text style={[s.provBadgeText, { color: payColor, marginLeft: 4 }]}>{pStatus.toUpperCase()}</Text>
                         </View>
                       </View>
+                      <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+                    </View>
 
-                      <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8 }}>
-                        <View style={[s.badge, bStatus === "completed" ? s.badgeGreen : bStatus === "cancelled" ? s.badgeRed : s.badgeYellow, { marginRight: 8, marginTop: 0 }]}>
-                          <Text style={s.badgeText}>{bStatus.replace("_", " ").toUpperCase()}</Text>
+                    {/* Service Title + ID */}
+                    <Text style={s.bkServiceTitle} numberOfLines={1}>{item.service?.title || "Unknown Service"}</Text>
+                    <Text style={s.bkId}>#{item._id?.slice(-6)?.toUpperCase()}</Text>
+
+                    <View style={s.provDivider} />
+
+                    {/* Customer & Provider */}
+                    <View style={s.bkPeopleRow}>
+                      <View style={s.bkPersonCol}>
+                        <Text style={s.bkPersonLabel}>Customer</Text>
+                        <View style={s.bkPersonInfo}>
+                          <View style={s.bkPersonDot}>
+                            <Text style={{ fontSize: 10, fontWeight: "bold", color: "#135E4B" }}>{(item.customer?.firstName?.charAt(0) || "?").toUpperCase()}</Text>
+                          </View>
+                          <Text style={s.bkPersonName}>{item.customer?.firstName} {item.customer?.lastName}</Text>
                         </View>
-                        <View style={[s.badge, getPColor(pStatus), { marginTop: 0 }]}>
-                          <Text style={s.badgeText}>{pStatus.toUpperCase()} PAY</Text>
+                      </View>
+                      <View style={s.bkPersonCol}>
+                        <Text style={s.bkPersonLabel}>Provider</Text>
+                        <View style={s.bkPersonInfo}>
+                          <View style={[s.bkPersonDot, { backgroundColor: "#3B82F615" }]}>
+                            <Text style={{ fontSize: 10, fontWeight: "bold", color: "#3B82F6" }}>{(item.provider?.firstName?.charAt(0) || "?").toUpperCase()}</Text>
+                          </View>
+                          <Text style={s.bkPersonName}>{item.provider?.firstName} {item.provider?.lastName}</Text>
                         </View>
                       </View>
                     </View>
-                    
-                    <Ionicons name="chevron-forward" size={20} color="#9CA3AF" style={{ alignSelf: "center", marginLeft: 10 }} />
+
+                    {/* Schedule */}
+                    <View style={s.bkScheduleRow}>
+                      <View style={s.bkScheduleItem}>
+                        <Ionicons name="calendar-outline" size={13} color="#64748B" />
+                        <Text style={s.bkScheduleText}>{item.date || "N/A"}</Text>
+                      </View>
+                      <View style={s.bkScheduleItem}>
+                        <Ionicons name="time-outline" size={13} color="#64748B" />
+                        <Text style={s.bkScheduleText}>{item.time || "N/A"}</Text>
+                      </View>
+                    </View>
                   </TouchableOpacity>
                 );
               }}
@@ -642,28 +744,57 @@ const AdminDashboardScreen = ({ navigation }) => {
               const u = item.user || {};
               const status = u.providerStatus || "pending";
               return (
-                <View style={s.listItem}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.listTitle}>{item.title}</Text>
-                    <Text style={s.listSub}>{u.firstName} {u.lastName} · {u.email}</Text>
-                    <Text style={s.listSub}>{item.category} · LKR {item.price}</Text>
-                    <View style={[s.badge, status === "approved" ? s.badgeGreen : status === "rejected" ? s.badgeRed : s.badgeYellow]}>
-                      <Text style={s.badgeText}>{status.toUpperCase()}</Text>
+                <View style={s.provCard}>
+                  {/* Status & Delete */}
+                  <View style={s.provCardTopRow}>
+                    <View style={[s.provBadge, status === "approved" ? s.provBadgeGreen : status === "rejected" ? s.provBadgeRed : s.provBadgeYellow]}>
+                      <View style={[s.provBadgeDot, { backgroundColor: status === "approved" ? "#10B981" : status === "rejected" ? "#EF4444" : "#F59E0B" }]} />
+                      <Text style={[s.provBadgeText, { color: status === "approved" ? "#10B981" : status === "rejected" ? "#EF4444" : "#D97706" }]}>{status.toUpperCase()}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => handleDeleteProvider(item._id)} style={s.provDelIcon}>
+                      <Ionicons name="trash-outline" size={18} color="#9CA3AF" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Header: Avatar & Info */}
+                  <View style={s.provHeader}>
+                    <View style={s.provAvatar}>
+                      <Text style={s.provAvatarText}>{(u.firstName?.charAt(0) || "U").toUpperCase()}</Text>
+                    </View>
+                    <View style={s.provInfo}>
+                      <Text style={s.provName}>{u.firstName} {u.lastName}</Text>
+                      <Text style={s.provEmail}>{u.email}</Text>
                     </View>
                   </View>
+
+                  {/* Divider */}
+                  <View style={s.provDivider} />
+
+                  {/* Service Details */}
+                  <Text style={s.provServiceTitle}>{item.title}</Text>
+                  <View style={s.provChipRow}>
+                    <View style={s.provChip}>
+                      <Ionicons name="pricetag-outline" size={12} color="#135E4B" />
+                      <Text style={s.provChipText}>{item.category}</Text>
+                    </View>
+                    <View style={s.provChip}>
+                      <Text style={s.provChipText}><Text style={{ fontWeight: "700", color: "#135E4B" }}>LKR</Text> {item.price}</Text>
+                    </View>
+                  </View>
+
+                  {/* Actions for Pending */}
                   {status === "pending" && (
-                    <View style={{ alignItems: "center" }}>
-                      <TouchableOpacity style={[s.actionBtn, { backgroundColor: "#10B981" }]} onPress={() => handleProviderAction(item._id, "approved")}>
-                        <Ionicons name="checkmark" size={18} color="#fff" />
+                    <View style={s.provActionRow}>
+                      <TouchableOpacity style={[s.provActionBtn, s.provActionReject]} onPress={() => handleProviderAction(item._id, "rejected")}>
+                        <Ionicons name="close-circle-outline" size={16} color="#EF4444" />
+                        <Text style={s.provActionTextReject}>Reject</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={[s.actionBtn, { backgroundColor: "#EF4444", marginTop: 6 }]} onPress={() => handleProviderAction(item._id, "rejected")}>
-                        <Ionicons name="close" size={18} color="#fff" />
+                      <TouchableOpacity style={[s.provActionBtn, s.provActionApprove]} onPress={() => handleProviderAction(item._id, "approved")}>
+                        <Ionicons name="checkmark-circle-outline" size={16} color="#fff" />
+                        <Text style={s.provActionTextApprove}>Approve</Text>
                       </TouchableOpacity>
                     </View>
                   )}
-                  <TouchableOpacity onPress={() => handleDeleteProvider(item._id)} style={s.delBtn}>
-                    <Ionicons name="trash-outline" size={20} color="#EF4444" />
-                  </TouchableOpacity>
                 </View>
               );
             }}
@@ -674,25 +805,55 @@ const AdminDashboardScreen = ({ navigation }) => {
           <ListPage data={payments} loading={loading} onRefresh={() => load("payments")} emptyMsg="No payment records"
             renderItem={({ item }) => {
               const cust = item.customer;
-              const ps = item.status;
+              const ps = item.status || "pending";
               const statusColor = ps === "paid" ? "#10B981" : ps === "failed" ? "#EF4444" : ps === "refunded" ? "#8B5CF6" : ps === "pending" ? "#F59E0B" : "#6B7280";
+              const statusBg = statusColor + "15";
+              const method = item.paymentMethod || "card";
               return (
                 <TouchableOpacity
-                  style={s.listItem}
+                  style={s.payCard}
                   onPress={() => navigation.navigate("AdminPaymentDetails", { paymentId: item._id })}
+                  activeOpacity={0.7}
                 >
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.listTitle}>LKR {(item.amount || 0).toLocaleString()}</Text>
-                    <Text style={s.listSub}>
-                      {cust ? `${cust.firstName} ${cust.lastName}` : "Unknown"} · {item.paymentMethod || "card"}
-                    </Text>
-                    <Text style={s.listSub}>****{item.cardLastFour || "----"} · {new Date(item.createdAt).toLocaleDateString()}</Text>
-                    <View style={[s.badge, { backgroundColor: statusColor + "20" }]}>
-                      <Text style={[s.badgeText, { color: statusColor }]}>{(item.status || "N/A").toUpperCase()}</Text>
+                  {/* Top: Status + Chevron */}
+                  <View style={s.bkCardTopRow}>
+                    <View style={[s.provBadge, { backgroundColor: statusBg }]}>
+                      <View style={[s.provBadgeDot, { backgroundColor: statusColor }]} />
+                      <Text style={[s.provBadgeText, { color: statusColor }]}>{ps.toUpperCase()}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+                  </View>
+
+                  {/* Amount */}
+                  <Text style={s.payAmount}>LKR {(item.amount || 0).toLocaleString()}</Text>
+                  <Text style={s.bkId}>#{item._id?.slice(-6)?.toUpperCase()}</Text>
+
+                  <View style={s.provDivider} />
+
+                  {/* Customer */}
+                  <View style={s.payInfoRow}>
+                    <View style={s.bkPersonDot}>
+                      <Text style={{ fontSize: 10, fontWeight: "bold", color: "#135E4B" }}>{(cust?.firstName?.charAt(0) || "?").toUpperCase()}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.bkPersonName}>{cust ? `${cust.firstName} ${cust.lastName}` : "Unknown"}</Text>
+                      <Text style={{ fontSize: 12, color: "#94A3B8" }}>{cust?.email || ""}</Text>
                     </View>
                   </View>
-                  <View style={{ alignItems: "center" }}>
-                    <Ionicons name="chevron-forward" size={20} color="#999" />
+
+                  {/* Details chips */}
+                  <View style={s.payDetailsRow}>
+                    <View style={s.provChip}>
+                      <Ionicons name="card-outline" size={12} color="#135E4B" />
+                      <Text style={s.provChipText}>{method.toUpperCase()}</Text>
+                    </View>
+                    <View style={s.provChip}>
+                      <Text style={s.provChipText}>****{item.cardLastFour || "----"}</Text>
+                    </View>
+                    <View style={s.provChip}>
+                      <Ionicons name="calendar-outline" size={12} color="#135E4B" />
+                      <Text style={s.provChipText}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+                    </View>
                   </View>
                 </TouchableOpacity>
               );
@@ -714,35 +875,84 @@ const AdminDashboardScreen = ({ navigation }) => {
             {feedbackTab === "reviews" ? (
               <ListPage data={reviews} loading={loading} onRefresh={() => load("feedbacks")} emptyMsg="No reviews yet"
                 renderItem={({ item }) => (
-                  <View style={s.listItem}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.listTitle}>Rating: {"⭐".repeat(item.rating || 0)}</Text>
-                      <Text style={s.listSub}>{item.comment || "No comment"}</Text>
+                  <View style={s.fbCard}>
+                    {/* Top: Stars + Delete */}
+                    <View style={s.bkCardTopRow}>
+                      <View style={s.fbStarsRow}>
+                        {[1, 2, 3, 4, 5].map(i => (
+                          <Ionicons key={i} name={i <= (item.rating || 0) ? "star" : "star-outline"} size={16} color={i <= (item.rating || 0) ? "#F59E0B" : "#D1D5DB"} style={{ marginRight: 2 }} />
+                        ))}
+                        <Text style={s.fbRatingNum}>{item.rating || 0}/5</Text>
+                      </View>
+                      <TouchableOpacity onPress={() => handleDeleteReview(item._id)} style={s.provDelIcon}>
+                        <Ionicons name="trash-outline" size={18} color="#9CA3AF" />
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity onPress={() => handleDeleteReview(item._id)} style={s.delBtn}>
-                      <Ionicons name="trash-outline" size={20} color="#EF4444" />
-                    </TouchableOpacity>
+
+                    {/* Comment */}
+                    <Text style={s.fbComment}>{item.comment || "No comment provided"}</Text>
+
+                    <View style={s.provDivider} />
+
+                    {/* Reviewer & Service info */}
+                    <View style={s.fbFooter}>
+                      <View style={s.bkPersonInfo}>
+                        <View style={s.bkPersonDot}>
+                          <Text style={{ fontSize: 10, fontWeight: "bold", color: "#135E4B" }}>{(item.user?.firstName?.charAt(0) || "?").toUpperCase()}</Text>
+                        </View>
+                        <View>
+                          <Text style={s.bkPersonName}>{item.user?.firstName} {item.user?.lastName}</Text>
+                          <Text style={{ fontSize: 11, color: "#94A3B8" }}>{item.service?.title || "Service"}</Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: 11, color: "#94A3B8" }}>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ""}</Text>
+                    </View>
                   </View>
                 )}
               />
             ) : (
               <ListPage data={complaints} loading={loading} onRefresh={() => load("feedbacks")} emptyMsg="No complaints yet"
                 renderItem={({ item }) => {
-                  const statusColor = item.status === "resolved" ? "#10B981" : "#F59E0B";
+                  const cStatus = item.status || "pending";
+                  const cColor = cStatus === "resolved" ? "#10B981" : cStatus === "in_progress" ? "#3B82F6" : "#F59E0B";
+                  const cBg = cColor + "15";
                   return (
                     <TouchableOpacity
-                      style={s.listItem}
+                      style={s.fbCard}
                       onPress={() => navigation.navigate("AdminComplaintDetails", { complaintId: item._id })}
+                      activeOpacity={0.7}
                     >
-                      <View style={{ flex: 1 }}>
-                        <Text style={s.listTitle}>{item.title}</Text>
-                        <Text style={s.listSub}>{item.user?.firstName} {item.user?.lastName} · {item.category}</Text>
-                        <View style={[s.badge, { backgroundColor: statusColor + "20" }]}>
-                          <Text style={[s.badgeText, { color: statusColor }]}>{(item.status || "N/A").toUpperCase()}</Text>
+                      {/* Top: Status + Chevron */}
+                      <View style={s.bkCardTopRow}>
+                        <View style={[s.provBadge, { backgroundColor: cBg }]}>
+                          <View style={[s.provBadgeDot, { backgroundColor: cColor }]} />
+                          <Text style={[s.provBadgeText, { color: cColor }]}>{cStatus.replace("_", " ").toUpperCase()}</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+                      </View>
+
+                      {/* Title */}
+                      <Text style={s.svcTitle}>{item.title}</Text>
+
+                      {/* Category chip */}
+                      <View style={{ flexDirection: "row", marginTop: 6, marginBottom: 4 }}>
+                        <View style={s.provChip}>
+                          <Ionicons name="pricetag-outline" size={12} color="#135E4B" />
+                          <Text style={s.provChipText}>{item.category || "General"}</Text>
                         </View>
                       </View>
-                      <View style={{ alignItems: "center" }}>
-                        <Ionicons name="chevron-forward" size={20} color="#999" />
+
+                      <View style={s.provDivider} />
+
+                      {/* User info */}
+                      <View style={s.fbFooter}>
+                        <View style={s.bkPersonInfo}>
+                          <View style={s.bkPersonDot}>
+                            <Text style={{ fontSize: 10, fontWeight: "bold", color: "#135E4B" }}>{(item.user?.firstName?.charAt(0) || "?").toUpperCase()}</Text>
+                          </View>
+                          <Text style={s.bkPersonName}>{item.user?.firstName} {item.user?.lastName}</Text>
+                        </View>
+                        <Text style={{ fontSize: 11, color: "#94A3B8" }}>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ""}</Text>
                       </View>
                     </TouchableOpacity>
                   );
@@ -997,4 +1207,77 @@ const s = StyleSheet.create({
     paddingHorizontal: 12, borderRadius: 12, height: 48 
   },
   searchInput: { flex: 1, fontSize: 15, color: "#1E293B", marginLeft: 10 },
+  // Provider Card Redesign Styles
+  provCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, marginHorizontal: 16, marginTop: 10, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  provCardTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  provBadge: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  provBadgeGreen: { backgroundColor: "#10B98115" },
+  provBadgeRed: { backgroundColor: "#EF444415" },
+  provBadgeYellow: { backgroundColor: "#F59E0B15" },
+  provBadgeDot: { width: 6, height: 6, borderRadius: 3, marginRight: 6 },
+  provBadgeText: { fontSize: 10, fontWeight: "bold" },
+  provDelIcon: { padding: 4 },
+  provHeader: { flexDirection: "row", alignItems: "center" },
+  provAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#135E4B15", alignItems: "center", justifyContent: "center", marginRight: 12 },
+  provAvatarText: { fontSize: 18, fontWeight: "bold", color: "#135E4B" },
+  provInfo: { flex: 1 },
+  provName: { fontSize: 16, fontWeight: "bold", color: "#1F2937" },
+  provEmail: { fontSize: 13, color: "#64748B", marginTop: 2 },
+  provDivider: { height: 1, backgroundColor: "#F1F5F9", marginVertical: 14 },
+  provServiceTitle: { fontSize: 15, fontWeight: "600", color: "#1E293B", marginBottom: 8 },
+  provChipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 4 },
+  provChip: { flexDirection: "row", alignItems: "center", backgroundColor: "#F8FAFC", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: "#E2E8F0" },
+  provChipText: { fontSize: 12, color: "#475569", marginLeft: 4, fontWeight: "500" },
+  provActionRow: { flexDirection: "row", gap: 10, marginTop: 16 },
+  provActionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 10, borderRadius: 10 },
+  provActionReject: { backgroundColor: "#FEF2F2", borderWidth: 1, borderColor: "#FECACA" },
+  provActionApprove: { backgroundColor: "#10B981" },
+  provActionTextReject: { color: "#EF4444", fontWeight: "bold", fontSize: 14, marginLeft: 6 },
+  provActionTextApprove: { color: "#fff", fontWeight: "bold", fontSize: 14, marginLeft: 6 },
+  // Service Card Redesign Styles
+  svcCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 12, marginHorizontal: 16, marginTop: 10, elevation: 2, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  svcCardTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+  svcIconBtn: { padding: 6, marginLeft: 4 },
+  svcTitle: { fontSize: 16, fontWeight: "bold", color: "#1F2937", marginBottom: 2 },
+  svcProvider: { fontSize: 13, color: "#64748B" },
+  svcChangesBox: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFFBEB", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, marginTop: 10, borderWidth: 1, borderColor: "#FDE68A" },
+  svcChangesText: { fontSize: 12, color: "#92400E", marginLeft: 8, flex: 1 },
+  svcCatCard: { backgroundColor: "#fff", borderRadius: 14, padding: 14, marginBottom: 10, marginHorizontal: 16, marginTop: 8, elevation: 1, shadowColor: "#000", shadowOpacity: 0.03, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  svcCatLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
+  svcCatIcon: { width: 40, height: 40, borderRadius: 10, backgroundColor: "#135E4B10", alignItems: "center", justifyContent: "center", marginRight: 12 },
+  svcCatName: { fontSize: 15, fontWeight: "600", color: "#1F2937" },
+  // Booking Card Redesign Styles
+  bkFilterSection: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#F1F5F9" },
+  bkFilterLabel: { fontSize: 11, fontWeight: "700", color: "#94A3B8", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 },
+  bkPill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: "#F1F5F9", marginRight: 8 },
+  bkPillActive: { backgroundColor: "#135E4B" },
+  bkPillText: { fontSize: 11, fontWeight: "bold", color: "#64748B" },
+  bkPillTextActive: { color: "#fff" },
+  bkCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 12, marginHorizontal: 16, marginTop: 10, elevation: 2, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  bkCardTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+  bkServiceTitle: { fontSize: 16, fontWeight: "bold", color: "#1F2937", marginBottom: 2 },
+  bkId: { fontSize: 12, color: "#94A3B8", fontWeight: "600" },
+  bkPeopleRow: { flexDirection: "row" },
+  bkPersonCol: { flex: 1 },
+  bkPersonLabel: { fontSize: 11, color: "#94A3B8", fontWeight: "600", marginBottom: 6, textTransform: "uppercase" },
+  bkPersonInfo: { flexDirection: "row", alignItems: "center" },
+  bkPersonDot: { width: 24, height: 24, borderRadius: 12, backgroundColor: "#135E4B15", alignItems: "center", justifyContent: "center", marginRight: 8 },
+  bkPersonName: { fontSize: 13, color: "#374151", fontWeight: "500" },
+  bkScheduleRow: { flexDirection: "row", alignItems: "center", marginTop: 12, backgroundColor: "#F8FAFC", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
+  bkScheduleItem: { flexDirection: "row", alignItems: "center", marginRight: 20 },
+  bkScheduleText: { fontSize: 12, color: "#64748B", marginLeft: 6, fontWeight: "500" },
+  // Payment Card Styles
+  payCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 12, marginHorizontal: 16, marginTop: 10, elevation: 2, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  payAmount: { fontSize: 22, fontWeight: "bold", color: "#1F2937", marginBottom: 2 },
+  payInfoRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  payDetailsRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 4 },
+  // Feedback Card Styles
+  fbCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 12, marginHorizontal: 16, marginTop: 10, elevation: 2, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  fbStarsRow: { flexDirection: "row", alignItems: "center" },
+  fbRatingNum: { fontSize: 12, fontWeight: "bold", color: "#F59E0B", marginLeft: 8 },
+  fbComment: { fontSize: 14, color: "#374151", lineHeight: 20, marginTop: 4 },
+  fbFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  // User Management Redesign Styles
+  umFilterSection: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#F1F5F9" },
+  umCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 12, marginHorizontal: 16, marginTop: 10, elevation: 2, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
 });
